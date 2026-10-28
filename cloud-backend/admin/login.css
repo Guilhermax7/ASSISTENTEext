@@ -1,0 +1,24 @@
+.auth-screen{display:grid;grid-template-columns:1fr 1fr;overflow:hidden;border:1px solid #5d4669;border-radius:24px;box-shadow:0 25px 90px #0005;background:#21192b;min-height:440px;margin-top:34px}
+.auth-hero{background:radial-gradient(ellipse 85% 70% at 35% 15%,#593057,#2c1d3c 70%,#22162f);padding:46px 38px;display:flex;flex-direction:column;align-items:flex-start}
+.auth-hero h2{font-size:clamp(29px,4vw,43px);line-height:1.17;letter-spacing:-.035em;margin:0 0 16px}
+.auth-hero>p:not(.eyebrow){color:#decce3;line-height:1.8;max-width:430px}
+.auth-mark{width:55px;height:55px;display:grid;place-items:center;background:linear-gradient(130deg,#f0b2d1,#ad94e8);border-radius:16px;color:#3a2044;font-size:30px;margin-bottom:38px}
+.auth-highlights{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:30px}
+.auth-highlights span{font-size:12px;background:#ffffff0f;border:1px solid #ffffff25;color:#e6d8ed;border-radius:100px;padding:6px 10px}
+.auth-form-side{padding:38px 34px;display:flex;flex-direction:column;justify-content:center}
+.auth-form h2{font-size:26px;line-height:1.25;margin:0 0 26px}
+.auth-form label{margin:12px 0}
+.form-eyebrow{font-size:11px;font-weight:750;letter-spacing:.17em;color:#efb1d0!important;margin-bottom:10px!important}
+.auth-form input{min-height:46px}
+.auth-form input:focus-visible{outline:2px solid #dcb3f3;outline-offset:2px}
+.auth-submit{margin-top:16px;padding:14px 18px;width:100%;font-size:15px}
+.auth-hint{font-size:12px;line-height:1.7;color:#c5b4cc}
+.auth-error{background:#492d3e;border:1px solid #b76b93;color:#ffe7f1;border-radius:12px;padding:12px 14px;font-size:13px}
+.auth-loading{color:#d7c4e0;display:flex;align-items:center;min-height:120px}
+.remember{margin:15px 0 3px!important}
+.signed-in-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 16px;background:#251e30;border:1px solid #54415d;border-radius:13px;font-size:13px;color:#d9cadf}
+.signed-in-indicator{display:inline-block;width:8px;height:8px;background:#81d6ab;border-radius:50%;margin-right:5px}
+.signed-in-bar strong{color:#fff}
+.signed-in-bar button{padding:7px 12px}
+body:has(.auth-screen:not([hidden])) .dashboard-header{margin-bottom:4px}
+@media(max-width:750px){.auth-screen{grid-template-columns:1fr}.auth-hero{padding:30px 22px}.auth-mark{margin-bottom:15px}.auth-highlights{margin-top:4px;padding-top:10px}.auth-form-side{padding:26px 22px}.signed-in-bar{flex-direction:column;align-items:flex-start}}
