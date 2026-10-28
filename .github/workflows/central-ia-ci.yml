@@ -7,6 +7,9 @@ on:
       - 'ai-assistant.js'
       - 'manifest.json'
       - 'test-extension.mjs'
+      - 'conversation-reader.js'
+      - 'templates.js'
+      - 'test-conversation.mjs'
       - 'central-ia.html'
       - 'index.html'
       - '.github/workflows/central-ia-ci.yml'
@@ -40,7 +43,9 @@ jobs:
       - name: Verificação da extensão instalada (sem chaves)
         run: |
           node --check ai-assistant.js
-          node --test test-extension.mjs
+          node --check conversation-reader.js
+          node --check templates.js
+          node --test test-extension.mjs test-conversation.mjs
       - name: Security and HTTP smoke tests (no real keys)
         working-directory: cloud-backend
         run: npm test
