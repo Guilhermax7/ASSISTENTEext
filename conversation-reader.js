@@ -78,8 +78,8 @@
         current=current.parentElement;
       }
       const desc=parts.join(' ');
-      const outgoing=/(?:^|[^a-z])(outgoing|outbound|sent|mine|from-me|is-me|message-out|messageOut|bubble-out|staff-message|agent-message|operator-message)(?:$|[^a-z])/i.test(desc)||/data-from-me=true|data-is-outbound=true/i.test(desc);
-      const incoming=/(?:^|[^a-z])(incoming|inbound|received|message-in|messageIn|bubble-in|client-message|customer-message)(?:$|[^a-z])/i.test(desc)||/data-from-me=false|data-is-outbound=false/i.test(desc);
+      const outgoing=/(?:^|[^a-z])(outgoing|outbound|sent|mine|from-me|is-me|message-out|messageOut|bubble-out|staff-message|agent-message|operator-message)(?:$|[^a-z])/i.test(desc)||/data-from-me=true|data-is-outbound=true|data-sender-type=(?:agent|operator|staff)|data-origin=(?:agent|business)/i.test(desc);
+      const incoming=/(?:^|[^a-z])(incoming|inbound|received|message-in|messageIn|bubble-in|client-message|customer-message)(?:$|[^a-z])/i.test(desc)||/data-from-me=false|data-is-outbound=false|data-sender-type=(?:client|customer|contact)|data-origin=(?:client|customer)/i.test(desc);
       if(outgoing!==incoming)return {role:outgoing?'Equipe':'Cliente',confidence:1,method:'metadata'};
       const rootRect=elementRect(root),rect=elementRect(node);
       // Alinhamento só vale se a bolha for visivelmente deslocada para um
@@ -105,7 +105,8 @@
   }
   const recent=deduped.slice(-18);
   if(!recent.length)return {ok:false,source:wa?'WhatsApp Web':'Tallos',messages:[],reason:'Não encontrei mensagens de texto da conversa ativa. Você pode colar o histórico manualmente.'};
-  const unresolved=recent.slice(-8).filter(item=>item.role==='Mensagem').length;
+  // O gerador valida todo o histórico transmitido; a confiabilidade precisa cobrir todas as mensagens, não apenas as oito últimas.
+  const unresolved=recent.filter(item=>item.role==='Mensagem').length;
   const roleCount=recent.filter(item=>item.role!=='Mensagem').length;
   return {ok:true,source:wa?'WhatsApp Web':'Tallos',messages:recent,
     reliable:unresolved===0&&roleCount>=1,unknownRecent:unresolved,
