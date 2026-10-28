@@ -31,7 +31,7 @@ async function proxy(conn,operation,master,body){
 function outgoing(state){return {policy:state.policy,agents:state.agents,connections:state.connections.map(({secret,...c})=>({...c,has_key:!!secret})),logs:[]}}
 function strip(text){return String(text).replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g,'[CPF]').replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g,'[CNPJ]').replace(/\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b/gi,'[EMAIL]').replace(/(?:\+55\s?)?\(?\d{2}\)?[\s-]?9?\d{4}[\s-]?\d{4}\b/g,'[TELEFONE]')}
 function response(data,status=200,origin=''){const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};if(origin){headers['Access-Control-Allow-Origin']=origin;headers.Vary='Origin';headers['Access-Control-Allow-Headers']='Authorization,Content-Type';headers['Access-Control-Allow-Methods']='GET,POST,PUT,DELETE,OPTIONS'}return new Response(status===204?null:JSON.stringify(data),{status,headers})}
-export default async function handler(req){
+async function handleWeb(req){
  const incoming=req.headers.get('origin')||'',allow=(process.env.SRA_LUCK_ALLOWED_EXTENSION_ORIGINS||'').split(',').map(x=>x.trim()).filter(x=>/^chrome-extension:\/\/[a-p]{32}$/.test(x)),origin=allow.includes(incoming)?incoming:'';
  try{
  if(incoming&&!origin)throw bad('ORIGIN_DENIED','Origem não autorizada.',403);
@@ -79,4 +79,20 @@ export default async function handler(req){
  }
  throw bad('NOT_FOUND','Rota não encontrada.',404);
  }catch(e){return response({error:{code:e.code||'INTERNAL_ERROR',message:e.code?e.message:'Falha interna da Central.',retryable:!!e.retryable}},e.status||500,origin)}
+}
+
+// Vercel Node.js chama (IncomingMessage, ServerResponse), não Request/Response.
+export default async function handler(req,res){
+ try{
+  let body;
+  if(!['GET','HEAD'].includes(req.method)){
+   if(req.body!==undefined)body=typeof req.body==='string'?req.body:JSON.stringify(req.body);
+   else{const chunks=[];for await(const c of req)chunks.push(c);body=Buffer.concat(chunks);}
+  }
+  const web=new Request('https://central.invalid'+req.url,{method:req.method,headers:req.headers,...(body!==undefined?{body}:{})});
+  const result=await handleWeb(web);
+  res.statusCode=result.status;
+  for(const [key,value] of result.headers)res.setHeader(key,value);
+  res.end(result.status===204?'':await result.text());
+ }catch(error){res.statusCode=500;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({error:{code:'INTERNAL_ERROR',message:'Falha interna da Central.'}}));}
 }
