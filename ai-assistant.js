@@ -2,6 +2,7 @@
 // Assistentes embutidos no ranking: leitura sob clique, revisão humana e suporte multprovedor.
 (() => {
   const STORAGE='sraLuckAiProviderV2';
+  const CENTRAL_API='https://assistenteext-ia.vercel.app';
   const PROVIDERS={
     openai:{endpoint:'https://api.openai.com/v1/chat/completions',model:'gpt-4.1-mini',protocol:'chat'},
     gemini:{endpoint:'https://generativelanguage.googleapis.com/v1beta',model:'gemini-2.5-flash',protocol:'gemini'},
@@ -11,7 +12,7 @@
     deepseek:{endpoint:'https://api.deepseek.com/chat/completions',model:'deepseek-chat',protocol:'chat'},
     ollama:{endpoint:'http://localhost:11434/api',model:'',protocol:'ollama'},
     compatible:{endpoint:'',model:'',protocol:'chat'},
-    central:{endpoint:'http://127.0.0.1:45421',model:'auto',protocol:'central'}
+    central:{endpoint:CENTRAL_API,model:'auto',protocol:'central'}
   };
   let connection=null,openedMode=null, busy=false, generationToken=0;
   let lastAiAttempt=null;
@@ -116,7 +117,7 @@
     modelStatus(root,provider==='central'?'Modelos e agentes definidos no painel Central de IA. Use o modelo auto.':provider==='ollama'?'Buscando modelos do Ollama local, sem necessidade de chave.':'Informe sua chave para descobrir os modelos habilitados.');
     discoveryIds.set(root,(discoveryIds.get(root)||0)+1);
     updateOllamaFields(root);
-    if(provider==='central')void chrome.storage.local.get('sraLuckCentralAccessV1').then(saved=>{if(field(root,'provider')?.value==='central'&&saved.sraLuckCentralAccessV1?.token){field(root,'key').value=saved.sraLuckCentralAccessV1.token;field(root,'endpoint').value=saved.sraLuckCentralAccessV1.url||PROVIDERS.central.endpoint;}});
+    if(provider==='central')void chrome.storage.local.get('sraLuckCentralAccessV1').then(saved=>{if(field(root,'provider')?.value==='central'&&saved.sraLuckCentralAccessV1?.token){field(root,'key').value=saved.sraLuckCentralAccessV1.token;field(root,'endpoint').value=centralEndpoint(saved.sraLuckCentralAccessV1.url||PROVIDERS.central.endpoint);}});
     queueDiscover(root);
   }
   function fillConfiguration(root){
@@ -241,11 +242,23 @@
     if(parsed.protocol!=='https:'&&!(local&&parsed.protocol==='http:'))throw new Error('Use HTTPS. HTTP é permitido somente para localhost.');
     return parsed.toString().replace(/\/$/,'');
   }
+  function centralEndpoint(raw){
+    const parsed=new URL(validEndpoint(raw));
+    if(parsed.protocol==='https:' &&
+       (parsed.hostname==='assistenteext.vercel.app'||parsed.hostname==='assistenteext-ia.vercel.app'))
+      return CENTRAL_API;
+    if(parsed.hostname==='sra-luck-freellmapi.onrender.com')
+      throw new Error('Informe o endereço do backend da Central, não o FreeLLMAPI: '+CENTRAL_API);
+    if(parsed.pathname!=='/' && parsed.pathname!=='')
+      throw new Error('A URL da Central não deve conter /api, /v1, /admin ou outros caminhos. Use '+CENTRAL_API);
+    return parsed.origin;
+  }
   function getFormConfig(root){
     const provider=field(root,'provider').value;
     const model=(field(root,'modelChoice').value==='__manual__'?field(root,'model').value:field(root,'modelChoice').value).trim();
     const key=field(root,'key').value.trim();
-    const endpoint=validEndpoint(field(root,'endpoint').value.trim());
+    const endpoint=provider==='central'?centralEndpoint(field(root,'endpoint').value.trim()):validEndpoint(field(root,'endpoint').value.trim());
+    if(provider==='central')field(root,'endpoint').value=endpoint;
     if(!model)throw new Error('Escolha um modelo da lista ou digite o nome de um modelo disponível no seu servidor.');
     if(needsApiKey(provider,endpoint)&&!key)throw new Error('Este provedor exige uma chave de API. Informe a chave para continuar.');
     if(/[\r\n]/.test(key))throw new Error('Confira a chave: ela não pode conter quebras de linha.');
@@ -334,7 +347,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
   async function requestAI(config,mode,input,root,override=null){
     if(config.provider==='central'){
       const linked=(await chrome.storage.local.get('sraLuckCentralAccessV1')).sraLuckCentralAccessV1||{};
-      const centralUrl=validEndpoint(linked.url||config.endpoint).replace(/\/$/,'');
+      const centralUrl=centralEndpoint(linked.url||config.endpoint);
       const centralToken=linked.token||config.key;
       if(!centralToken)throw new Error('Conecte a Central de IA no painel para usar o modelo.');
       const payload={request_id:(globalThis.crypto?.randomUUID?.()||'sra-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-request'),agent:mode,task:override?.system?'template':'reply',context_authorized:true,messages:[{role:'user',content:override?.user||prompt(mode,context.name,input,root,override?.styleSample||'')}],max_tokens:1000,temperature:0.5};
@@ -342,7 +355,8 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
       try{
         const response=await fetch(centralUrl+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${centralToken}`},body:JSON.stringify(payload),signal:controller.signal});
         const data=await response.json().catch(()=>({}));
-        if(!response.ok){const error=new Error(data?.error?.message||`Central de IA: erro ${response.status}.`);error.retryable=data?.error?.retryable===true;throw error;}
+        if(!response.ok){const explanation=response.status===404?'Central de IA: a rota /api/generate não existe neste endereço. O backend correto é '+CENTRAL_API+'.':response.status===403?'Central de IA: acesso negado. Pode ser necessário autorizar o ID desta extensão nas origens da Vercel.':null;
+          const error=new Error(data?.error?.message||explanation||`Central de IA: erro ${response.status}.`);error.retryable=data?.error?.retryable===true;throw error;}
         return String(data.text||'').trim();
       }catch(error){if(error.name==='AbortError')throw new Error('Central de IA: solicitação excedeu o tempo limite.');if(error instanceof TypeError)throw new Error('Não foi possível conectar à Central de IA. Confira o endereço HTTPS, sua conexão e o status da hospedagem.');throw error;}
       finally{clearTimeout(timer);}
@@ -602,7 +616,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     if(act==='clear-monitor'){
       await chrome.storage.local.remove(REPEAT_DATA);await showSuggestions(mode);return;
     }
-    if(act==='central-panel'){await chrome.tabs.create({url:chrome.runtime.getURL('central-ia.html')});return;}
+    if(act==='central-panel'){await chrome.tabs.create({url:'https://assistenteext-ia.vercel.app/admin/index.html'});return;}
     if(act==='settings'){fillConfiguration(root);display(root,'config');err(root,'');if(field(root,'key').value||field(root,'provider').value==='ollama')queueDiscover(root);return;}
     if(act==='discover-models'){await discoverModels(root,true);return;}
     if(act==='save'){await saveConfiguration(mode);return;}
