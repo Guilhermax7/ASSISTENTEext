@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let BASE='http://127.0.0.1:45421'; const STORAGE='sraLuckCentralAccessV1';
+const IS_EXTENSION=typeof chrome!=='undefined' && location.protocol==='chrome-extension:' && !!chrome.storage?.local;
+let BASE=IS_EXTENSION?'http://127.0.0.1:45421':'https://assistenteext-ia.vercel.app'; const STORAGE='sraLuckCentralAccessV1';
 let token='',state=null;
 function serviceUrl(value){const u=new URL(value);const local=['127.0.0.1','localhost'].includes(u.hostname);if((u.protocol!=='https:'&&!(local&&u.protocol==='http:'))||u.username||u.password||u.search||u.hash||u.pathname!=='/')throw new Error('Use uma URL HTTPS de hospedagem ou localhost. Não inclua caminhos, senhas ou parâmetros.');return u.origin;}
 function isCloud(){return BASE.startsWith('https://');}
@@ -40,8 +41,8 @@ function readModel(root,name){const value=root.querySelector(`[data-field="${nam
 function renderLogs(){const logs=$('logs');logs.replaceChildren();if(!state.logs.length)logs.append(node('p','hint','Nenhuma execução registrada nesta sessão do serviço.'));
  for(const e of state.logs)logs.append(node('div','log',`${new Date(e.at).toLocaleTimeString('pt-BR')} · ${e.type} · ${e.agent||''} · ${e.provider||''} · ${e.model||''} · ${e.code||''} ${e.usage?.input_tokens!=null?'· '+e.usage.input_tokens+' entrada / '+e.usage.output_tokens+' saída':''}`));
 }
-$('connect').onclick=async()=>{token=$('accessToken').value.trim();try{BASE=serviceUrl($('server').value.trim());await refresh();await chrome.storage.local.set({[STORAGE]:{token,url:BASE}});message(isCloud()?'Conexão na nuvem salva. Não precisa iniciar servidor no computador.':'Conexão local salva neste navegador.');}catch(e){$('serverStatus').textContent='● Falha na conexão';message(e.message);}};
-$('forget').onclick=async()=>{token='';$('accessToken').value='';$('workspace').hidden=true;await chrome.storage.local.remove(STORAGE);message('Token de acesso do serviço apagado deste navegador.');};
+$('connect').onclick=async()=>{token=$('accessToken').value.trim();try{BASE=serviceUrl($('server').value.trim());await refresh();if(IS_EXTENSION){await chrome.storage.local.set({[STORAGE]:{token,url:BASE}});message(isCloud()?'Conexão da extensão salva.':'Conexão local da extensão salva.');}else message('Conectado. Por segurança, o token administrativo não será salvo neste site.');}catch(e){$('serverStatus').textContent='● Falha na conexão';message(e.message);}};
+$('forget').onclick=async()=>{token='';$('accessToken').value='';$('workspace').hidden=true;if(IS_EXTENSION)await chrome.storage.local.remove(STORAGE);message('Token de acesso retirado desta sessão.');};
 $('connType').onchange=()=>{$('connUrl').value=isCloud()?'https://freellmapi.seu-dominio.example/v1':'http://127.0.0.1:31415/v1';};
 $('connClear').onclick=()=>{$('connectionForm').reset();$('connId').value='';$('connType').onchange();};
 $('connectionForm').onsubmit=async e=>{e.preventDefault();const data={id:$('connId').value||undefined,name:$('connName').value.trim(),type:$('connType').value,base_url:$('connUrl').value.trim(),enabled:$('connEnabled').checked};if($('connKey').value)data.api_key=$('connKey').value;
@@ -52,4 +53,4 @@ $('savePolicy').onclick=async()=>{try{const agents={};for(const name of ['cobran
  state=await api('/api/settings','PUT',{free_only:$('freeOnly').checked,agents});message('Política e modelos salvos.');await refresh();}catch(e){message(e.message);}};
 $('testRun').onclick=async()=>{if(!$('testConsent').checked){message('Confirme o consentimento para enviar a mensagem fictícia.');return;}const out=$('testOutput');out.textContent='Executando teste autorizado…';try{const d=await api('/api/generate','POST',{agent:$('testAgent').value,task:'reply',context_authorized:true,messages:[{role:'user',content:$('testMessage').value}],max_tokens:300});out.textContent=`Provedor: ${d.provider}\nModelo: ${d.model}\nLatência: ${d.latency_ms} ms\n\n${d.text}`;await refresh();}catch(e){out.textContent='Erro: '+e.message;message(e.message);}};
 $('refresh').onclick=()=>refresh().catch(e=>message(e.message));
-(async()=>{const saved=await chrome.storage.local.get(STORAGE);if(saved[STORAGE]?.token){token=saved[STORAGE].token;$('accessToken').value=token;try{BASE=serviceUrl(saved[STORAGE].url||BASE);$('server').value=BASE;await refresh();}catch(e){message('Serviço indisponível: '+e.message);}}})();
+(async()=>{$('server').value=BASE;if(!IS_EXTENSION){message('Painel web: por segurança, o token é usado somente durante esta sessão.');return;}try{const saved=await chrome.storage.local.get(STORAGE);if(saved[STORAGE]?.token){token=saved[STORAGE].token;$('accessToken').value=token;BASE=serviceUrl(saved[STORAGE].url||BASE);$('server').value=BASE;await refresh();}}catch(e){message('Serviço indisponível: '+e.message);}})();
