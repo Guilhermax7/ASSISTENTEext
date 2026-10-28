@@ -39,3 +39,32 @@ test('regressão: tempo de espera do FreeLLMAPI comporta despertar da Render',as
  assert.match(server,/PROVIDER_WAKING/);
  assert.match(client,/c\.abort\(\),57000/);
 });
+
+test('Node 22: DNS fixado não quebra conexão HTTPS por seleção automática de IP',async()=>{
+ const {createServer,request}=await import('node:http');
+ const server=createServer((_req,res)=>{res.writeHead(200);res.end('connected')});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{
+  let lookupCalled=false;
+  const body=await new Promise((resolve,reject)=>{
+   const req=request('http://example.invalid:'+server.address().port+'/ping',{
+    autoSelectFamily:false,
+    lookup:(_hostname,options,callback)=>{
+     lookupCalled=true;assert.notEqual(options.all,true);
+     callback(null,'127.0.0.1',4);
+    }
+   },res=>{
+    const chunks=[];res.on('data',part=>chunks.push(part));
+    res.on('end',()=>resolve(Buffer.concat(chunks).toString('utf8')));
+   });
+   req.on('error',reject);req.end();
+  });
+  assert.equal(lookupCalled,true);
+  assert.equal(body,'connected');
+ }finally{await new Promise(resolve=>server.close(resolve))}
+});
+test('backend mantém correção de DNS pinado do Node 22',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const source=readFileSync(new URL('./api/index.mjs',import.meta.url),'utf8');
+ assert.match(source,/autoSelectFamily:false,lookup:/);
+});

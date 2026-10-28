@@ -22,14 +22,14 @@ async function proxy(conn,operation,master,body){
  const content=body?JSON.stringify(body):null;if(content&&Buffer.byteLength(content)>48000)throw bad('REQUEST_TOO_LARGE','Contexto excedeu o limite.',413);
  return await new Promise((resolve,reject)=>{
  let timedOut=false;
- const req=https.request(u,{method:content?'POST':'GET',timeout:50000,lookup:(_h,_o,cb)=>cb(null,ips[0].address,ips[0].family),headers:{Authorization:'Bearer '+decrypt(conn.secret,master),Accept:'application/json',...(content?{'Content-Type':'application/json','Content-Length':Buffer.byteLength(content)}:{})}},res=>{
+ const req=https.request(u,{method:content?'POST':'GET',timeout:50000,autoSelectFamily:false,lookup:(_h,_o,cb)=>cb(null,ips[0].address,ips[0].family),headers:{Authorization:'Bearer '+decrypt(conn.secret,master),Accept:'application/json',...(content?{'Content-Type':'application/json','Content-Length':Buffer.byteLength(content)}:{})}},res=>{
   const chunks=[];let size=0;res.on('data',v=>{size+=v.length;if(size>1048576)req.destroy(new Error('Limite excedido'));else chunks.push(v)});
   res.on('end',()=>{let data={};try{data=JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{}resolve({status:res.statusCode||500,data})});
  });
  req.on('timeout',()=>{timedOut=true;req.destroy(new Error('render-cold-start-timeout'))});
- req.on('error',()=>reject(timedOut
+ req.on('error',error=>{console.error('[FreeLLMAPI] Falha de transporte HTTPS:',String(error?.code||'UNKNOWN').slice(0,80));reject(timedOut
   ?bad('PROVIDER_WAKING','A Render gratuita pode estar iniciando. Aguarde cerca de um minuto e clique em Detectar modelos novamente.',504,true)
-  :bad('PROVIDER_OFFLINE','Não foi possível alcançar o FreeLLMAPI na Render. Verifique se o serviço está ativo e tente novamente.',502,true)));
+  :bad('PROVIDER_OFFLINE','A conexão HTTPS com o FreeLLMAPI falhou ('+String(error?.code||'NETWORK_ERROR').slice(0,40)+'). Verifique a Render; não altere suas chaves.',502,true));});
  if(content)req.write(content);req.end();
  });
 }
