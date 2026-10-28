@@ -32,7 +32,7 @@ function outgoing(state){return {policy:state.policy,agents:state.agents,connect
 function strip(text){return String(text).replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g,'[CPF]').replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g,'[CNPJ]').replace(/\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b/gi,'[EMAIL]').replace(/(?:\+55\s?)?\(?\d{2}\)?[\s-]?9?\d{4}[\s-]?\d{4}\b/g,'[TELEFONE]')}
 function response(data,status=200,origin=''){const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};if(origin){headers['Access-Control-Allow-Origin']=origin;headers.Vary='Origin';headers['Access-Control-Allow-Headers']='Authorization,Content-Type';headers['Access-Control-Allow-Methods']='GET,POST,PUT,DELETE,OPTIONS'}return new Response(status===204?null:JSON.stringify(data),{status,headers})}
 async function handleWeb(req){
- const incoming=req.headers.get('origin')||'',allow=(process.env.SRA_LUCK_ALLOWED_EXTENSION_ORIGINS||'').split(',').map(x=>x.trim()).filter(x=>/^chrome-extension:\/\/[a-p]{32}$/.test(x)),origin=allow.includes(incoming)?incoming:'';
+ const incoming=req.headers.get('origin')||'',ext=(process.env.SRA_LUCK_ALLOWED_EXTENSION_ORIGINS||'').split(',').map(x=>x.trim()).filter(x=>/^chrome-extension:\/\/[a-p]{32}$/.test(x)),web=['https://assistenteext.vercel.app',...(process.env.SRA_LUCK_ALLOWED_WEB_ORIGINS||'').split(',')].map(x=>x.trim()).filter(x=>/^https:\/\/[a-z0-9.-]+(?::443)?$/.test(x)),origin=[...ext,...web].includes(incoming)?incoming:'';
  try{
  if(incoming&&!origin)throw bad('ORIGIN_DENIED','Origem não autorizada.',403);
  if(req.method==='OPTIONS')return response(null,204,origin);
