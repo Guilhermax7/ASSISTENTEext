@@ -35,11 +35,11 @@ function runWA(){
   const main={querySelectorAll:s=>s==='.message-in,.message-out'?nodes:[]};
   return vm.runInNewContext(reader,{location:{hostname:'web.whatsapp.com'},document:{querySelector:s=>s==='#main'?main:null},getComputedStyle:style});
 }
-function runTallos(ambiguous=false){
+function runTallos(ambiguous=false,unknownFirst=false){
   const rootRect={left:400,right:1000,width:600,height:630,top:100,bottom:730};
   const bubble=(classes,text,rect)=>element({classes,text,rect});
   const nodes=[
-    bubble(['message-item','incoming'],'Quero pagar o boleto.',{left:420,right:660,width:240,height:55,top:340,bottom:395}),
+    bubble(unknownFirst?['message-item']:['message-item','incoming'],'Quero pagar o boleto.',unknownFirst?{left:420,right:910,width:490,height:55,top:340,bottom:395}:{left:420,right:660,width:240,height:55,top:340,bottom:395}),
     bubble(['message-item','outgoing'],'Vou consultar o boleto.',{left:740,right:980,width:240,height:55,top:425,bottom:480}),
     bubble(ambiguous?['message-item']:['message-item','incoming'],'Pode enviar hoje?',{left:420,right:ambiguous?910:650,width:ambiguous?490:230,height:55,top:520,bottom:575})
   ];
@@ -71,6 +71,12 @@ test('Tallos: autoria incerta bloqueia geração automática em vez de inventar 
   assert.equal(out.unknownRecent,1);
   assert.equal(out.messages[2].role,'Mensagem');
   assert.match(out.reason,/Revise as marcações/);
+});
+test('Histórico com fala antiga de origem desconhecida também é bloqueado',()=>{
+  const out=runTallos(false,true);
+  assert.equal(out.reliable,false);
+  assert.equal(out.messages[0].role,'Mensagem');
+  assert.equal(out.unknownRecent,1);
 });
 const block=assistant.slice(assistant.indexOf('  function parseConversation('),assistant.indexOf('  async function currentTab()'));
 function logic(mode='cobranca'){
