@@ -412,9 +412,9 @@ function makeAIInlinePanel(template){
       <button type="button" class="ai-inline-link" data-ai-action="from-reply">＋ Transformar esta resposta em template</button>
     </div>
     <div class="ai-inline-context" data-ai-view="context" hidden>
-      <p class="ai-hint">A IA considera o histórico e sugere a <strong>próxima resposta</strong>. Confira as mensagens; se a Tallos não permitir leitura, cole o trecho aqui.</p>
-      <textarea data-ai-field="transcript" rows="5" placeholder="Conversa recente entre cliente e equipe…"></textarea>
-      <div class="ai-inline-options"><label>Estilo<select data-ai-field="tone"><option value="adaptativo" selected>Adaptar à situação</option><option value="objetivo">Direto</option><option value="acolhedor">Acolhedor</option><option value="firme">Firme e respeitoso</option></select></label><label>Tamanho<select data-ai-field="length"><option value="curto">Curta</option><option value="medio" selected>Equilibrada</option><option value="detalhado">Detalhada</option></select></label></div>
+      <p class="ai-hint"><strong>Revise quem falou:</strong> cada fala deve começar por <strong>Cliente:</strong> ou <strong>Equipe:</strong>. Se aparecer <strong>Mensagem:</strong>, identifique o remetente antes de gerar. A IA só deve responder ao pedido real da cliente; a leitura não envia mensagens automaticamente.</p>
+      <textarea data-ai-field="transcript" rows="5" placeholder="Cliente: Preciso do boleto atualizado.\n\nEquipe: Posso enviar por aqui.\n\nCliente: Pode, obrigada."></textarea>
+      <div class="ai-inline-options"><label>Estilo<select data-ai-field="tone"><option value="adaptativo" selected>Adaptar à situação</option><option value="objetivo">Direto</option><option value="acolhedor">Acolhedor</option><option value="firme">Firme e respeitoso</option></select></label><label>Tamanho<select data-ai-field="length"><option value="curto" selected>Curta (1 a 2 frases)</option><option value="medio">Equilibrada</option><option value="detalhado">Detalhada</option></select></label></div>
       <label class="ai-field-label">Orientação extra (opcional)<textarea data-ai-field="instruction" rows="2" placeholder="Ex.: a cliente teve imprevisto. Seja direta e pergunte previsão."></textarea></label>
       <div class="ai-inline-actions"><button type="button" class="ai-primary" data-ai-action="generate">✦ Sugerir próxima resposta</button><button type="button" data-ai-action="reread">↻ Reler conversa</button></div>
     </div>
