@@ -6,7 +6,7 @@ const source=readFileSync(new URL('./ai-assistant.js',import.meta.url),'utf8');
 const manifest=JSON.parse(readFileSync(new URL('./manifest.json',import.meta.url),'utf8'));
 
 test('a extensão 1.4.4 aponta ao backend de IA, nunca à interface estática',()=>{
- assert.equal(manifest.version,'1.4.4');
+ assert.equal(manifest.version,'1.4.5');
  assert.match(source,/const CENTRAL_API='https:\/\/assistenteext-ia\.vercel\.app'/);
  assert.match(source,/central:\{endpoint:CENTRAL_API,model:'auto'/);
  assert.doesNotMatch(source,/central:\{endpoint:'http:\/\/127\.0\.0\.1:45421'/);
