@@ -43,7 +43,7 @@ function renderLogs(){const logs=$('logs');logs.replaceChildren();if(!state.logs
 }
 $('connect').onclick=async()=>{token=$('accessToken').value.trim();try{BASE=serviceUrl($('server').value.trim());await refresh();if(IS_EXTENSION){await chrome.storage.local.set({[STORAGE]:{token,url:BASE}});message(isCloud()?'Conexão da extensão salva.':'Conexão local da extensão salva.');}else message('Conectado. Por segurança, o token administrativo não será salvo neste site.');}catch(e){$('serverStatus').textContent='● Falha na conexão';message(e.message);}};
 $('forget').onclick=async()=>{token='';$('accessToken').value='';$('workspace').hidden=true;if(IS_EXTENSION)await chrome.storage.local.remove(STORAGE);message('Token de acesso retirado desta sessão.');};
-$('connType').onchange=()=>{$('connUrl').value=isCloud()?'https://freellmapi.seu-dominio.example/v1':'http://127.0.0.1:31415/v1';};
+$('connType').onchange=()=>{$('connUrl').value=isCloud()?'https://sra-luck-freellmapi.onrender.com/v1':'http://127.0.0.1:31415/v1';};
 $('connClear').onclick=()=>{$('connectionForm').reset();$('connId').value='';$('connType').onchange();};
 $('connectionForm').onsubmit=async e=>{e.preventDefault();const data={id:$('connId').value||undefined,name:$('connName').value.trim(),type:$('connType').value,base_url:$('connUrl').value.trim(),enabled:$('connEnabled').checked};if($('connKey').value)data.api_key=$('connKey').value;
  try{await api('/api/connections','POST',data);$('connKey').value='';$('connId').value='';message('Conexão salva. Use Detectar modelos para verificar a disponibilidade.');await refresh();}catch(e){message(e.message);}};
