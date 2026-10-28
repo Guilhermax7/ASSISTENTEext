@@ -1,0 +1,30 @@
+# Implantação de TESTE. Render Free hiberna e não é recomendado para produção.
+# FreeLLMAPI é single-user; não encaminhe dados reais de clientes sem aprovação.
+services:
+  - type: web
+    name: sra-luck-freellmapi
+    runtime: image
+    image:
+      url: ghcr.io/tashfeenahmed/freellmapi:v0.16.11
+    plan: free
+    region: ohio
+    healthCheckPath: /api/ping
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: FREEAPI_DB_BACKUP_URL
+        value: https://assistenteext-ia.vercel.app/api/backup
+      - key: FREEAPI_DB_BACKUP_TOKEN
+        sync: false
+      - key: FREEAPI_DB_BACKUP_KEY
+        sync: false
+      - key: FREEAPI_DB_BACKUP_INTERVAL_MS
+        value: "60000"
+      - key: REQUEST_ANALYTICS_RETENTION_DAYS
+        value: "7"
+      - key: REQUEST_ANALYTICS_MAX_ROWS
+        value: "1000"
