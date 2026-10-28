@@ -4,6 +4,9 @@ on:
     paths:
       - 'cloud-backend/**'
       - 'central-ia.js'
+      - 'ai-assistant.js'
+      - 'manifest.json'
+      - 'test-extension.mjs'
       - 'central-ia.html'
       - 'index.html'
       - '.github/workflows/central-ia-ci.yml'
@@ -34,6 +37,10 @@ jobs:
           node --check api/auth.mjs
           node --check admin/app.js
           node --check ../central-ia.js
+      - name: Verificação da extensão instalada (sem chaves)
+        run: |
+          node --check ai-assistant.js
+          node --test test-extension.mjs
       - name: Security and HTTP smoke tests (no real keys)
         working-directory: cloud-backend
         run: npm test
