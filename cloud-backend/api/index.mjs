@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {handleBackup} from '../lib/freellmapi-backup.mjs';
 import https from 'node:https';
 import {lookup} from 'node:dns/promises';
 import {isIP} from 'node:net';
@@ -84,6 +85,8 @@ async function handleWeb(req){
 // Vercel Node.js chama (IncomingMessage, ServerResponse), não Request/Response.
 export default async function handler(req,res){
  try{
+  const requestedPath=new URL(req.url,'https://central.invalid');
+  if(requestedPath.pathname==='/api/backup' || requestedPath.searchParams.get('route')==='backup') return await handleBackup(req,res);
   let body;
   if(!['GET','HEAD','OPTIONS'].includes(req.method)){
    if(req.body!==undefined)body=typeof req.body==='string'?req.body:JSON.stringify(req.body);

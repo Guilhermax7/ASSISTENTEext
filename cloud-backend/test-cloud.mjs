@@ -22,3 +22,11 @@ test('não confunde build com banco configurado',async()=>{configure();delete pr
 
 test('permite origem do painel web publicado',async()=>{configure();const r=await call('OPTIONS','/api/state',{origin:'https://assistenteext.vercel.app'});assert.equal(r.status,204);assert.equal(r.headers['access-control-allow-origin'],'https://assistenteext.vercel.app');});
 test('bloqueia sites de terceiros mesmo em preflight',async()=>{configure();const r=await call('OPTIONS','/api/state',{origin:'https://exemplo-malicioso.com'});assert.equal(r.status,403);assert.equal(r.headers['access-control-allow-origin'],undefined);});
+
+test('rota de backup exige segredo próprio, sem reutilizar Admin Token',async()=>{
+ delete process.env.SRA_LUCK_FREELLMAPI_BACKUP_TOKEN;
+ const a=await call('GET','/api/backup');
+ assert.equal(a.status,503); assert.equal(a.body.error.code,'BACKUP_NOT_CONFIGURED');
+ const b=await call('GET','/api/index?route=backup');
+ assert.equal(b.status,503); assert.equal(b.body.error.code,'BACKUP_NOT_CONFIGURED');
+});
