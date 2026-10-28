@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Sra. Luck — Carteira de Cobrança",
-  "version": "1.4.1",
+  "version": "1.4.3",
   "minimum_chrome_version": "116",
-  "description": "Carteira, templates, simulações e Central de IA com hospedagem na nuvem opcional (Ollama e APIs online).",
+  "description": "Carteira, templates e simulações com Central de IA FreeLLMAPI unificada.",
   "permissions": [
     "storage",
     "scripting",
