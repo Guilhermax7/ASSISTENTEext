@@ -46,7 +46,7 @@ function reply(res, status, message, contentType = 'application/json; charset=ut
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (status === 204) return res.end();
   res.setHeader('Content-Type', contentType);
-  return res.end(typeof message === 'string' ? message : JSON.stringify(message));
+  return res.end(Buffer.isBuffer(message) || typeof message === 'string' ? message : JSON.stringify(message));
 }
 function error(res, status, code) {
   return reply(res, status, { error: { code } });
