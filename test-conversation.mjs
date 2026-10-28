@@ -1,0 +1,115 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+
+const reader=readFileSync(new URL('./conversation-reader.js',import.meta.url),'utf8');
+const assistant=readFileSync(new URL('./ai-assistant.js',import.meta.url),'utf8');
+const ui=readFileSync(new URL('./templates.js',import.meta.url),'utf8');
+
+function element({text='',classes=[],rect={left:0,right:500,width:500,height:80,top:200,bottom:280},attrs={},children=[]}={}){
+  const set=new Set(classes);
+  return {
+    isConnected:true,innerText:text,textContent:text,parentElement:null,
+    classList:{contains:x=>set.has(x)},
+    getAttribute(name){return name==='class'?classes.join(' '):attrs[name]||null},
+    closest(selector){if(selector==='.message-in,.message-out'&&(set.has('message-in')||set.has('message-out')))return this;return null},
+    getBoundingClientRect(){return rect},
+    querySelectorAll(selector){
+      if(selector==='*')return children;
+      if(selector.includes('msg-text')&&children.length)return children;
+      if(selector.includes('message-item')&&children.length)return children;
+      return [];
+    },
+    querySelector(){return null},
+    contains(other){return this===other||children.includes(other)}
+  };
+}
+const style=()=>({display:'block',visibility:'visible'});
+function runWA(){
+  const makeMsg=(role,text)=>{
+    const content=element({text}),node=element({classes:[role],children:[content]});
+    content.parentElement=node;return node;
+  };
+  const nodes=[makeMsg('message-in','Oi, quero o boleto.'),makeMsg('message-out','Posso encaminhar por aqui.'),makeMsg('message-in','Pode, obrigada.')];
+  const main={querySelectorAll:s=>s==='.message-in,.message-out'?nodes:[]};
+  return vm.runInNewContext(reader,{location:{hostname:'web.whatsapp.com'},document:{querySelector:s=>s==='#main'?main:null},getComputedStyle:style});
+}
+function runTallos(ambiguous=false){
+  const rootRect={left:400,right:1000,width:600,height:630,top:100,bottom:730};
+  const bubble=(classes,text,rect)=>element({classes,text,rect});
+  const nodes=[
+    bubble(['message-item','incoming'],'Quero pagar o boleto.',{left:420,right:660,width:240,height:55,top:340,bottom:395}),
+    bubble(['message-item','outgoing'],'Vou consultar o boleto.',{left:740,right:980,width:240,height:55,top:425,bottom:480}),
+    bubble(ambiguous?['message-item']:['message-item','incoming'],'Pode enviar hoje?',{left:420,right:ambiguous?910:650,width:ambiguous?490:230,height:55,top:520,bottom:575})
+  ];
+  const root=element({rect:rootRect,classes:['messages-list'],children:nodes});
+  nodes.forEach(n=>n.parentElement=root);
+  const composer=element({rect:{left:420,right:970,width:550,height:35,top:735,bottom:770}});
+  const doc={
+    body:{},
+    querySelector:s=>s.includes('contenteditable')?composer:null,
+    querySelectorAll:s=>s==='[class*="messages-list"]'?[root]:[]
+  };
+  return vm.runInNewContext(reader,{location:{hostname:'app.tallos.com.br'},document:doc,getComputedStyle:style});
+}
+test('WhatsApp: distingue mensagens da cliente e da equipe e preserva ordem',()=>{
+  const out=runWA();
+  assert.equal(out.ok,true);
+  assert.equal(out.reliable,true);
+  assert.deepEqual(Array.from(out.messages,x=>x.role),['Cliente','Equipe','Cliente']);
+  assert.match(out.messages[2].text,/obrigada/);
+});
+test('Tallos: usa metadados de direção para identificar autor',()=>{
+  const out=runTallos();
+  assert.equal(out.reliable,true);
+  assert.deepEqual(Array.from(out.messages,x=>x.role),['Cliente','Equipe','Cliente']);
+});
+test('Tallos: autoria incerta bloqueia geração automática em vez de inventar remetente',()=>{
+  const out=runTallos(true);
+  assert.equal(out.reliable,false);
+  assert.equal(out.unknownRecent,1);
+  assert.equal(out.messages[2].role,'Mensagem');
+  assert.match(out.reason,/Revise as marcações/);
+});
+const block=assistant.slice(assistant.indexOf('  function parseConversation('),assistant.indexOf('  async function currentTab()'));
+function logic(mode='cobranca'){
+  const sandbox={
+    normalizeContext:v=>String(v||'').trim().slice(-14000),
+    field:(_root,name)=>({value:name==='length'?'curto':name==='tone'?'objetivo':''}),
+    templateLibrary:[
+      {id:'parcela-em-aberto',category:'cobranca',title:'Boleto e mensalidade',body:'Posso verificar o boleto da sua mensalidade e informar como obter o documento.'},
+      {id:'atendimento-voucher',category:'atendimento',title:'Consulta e voucher',body:'Posso orientar como funciona a consulta com voucher.'}
+    ],Date
+  };
+  vm.runInNewContext(block+';this.functions={parseConversation,prompt,matchingTemplates}',sandbox);
+  return sandbox.functions;
+}
+test('Histórico sem papéis ou contendo Mensagem: exige revisão',()=>{
+  const {parseConversation}=logic();
+  assert.throws(()=>parseConversation('Cliente: Oi\n\nMensagem: Tudo certo?'),/remetente identificado/);
+  assert.throws(()=>parseConversation('Oi, tudo bem?'),/formato/);
+  assert.throws(()=>parseConversation('Equipe: Olá!'),/nenhuma fala da cliente/);
+});
+test('Prompt de Cobrança foca na última cliente e usa somente templates de Cobrança',()=>{
+  const {prompt}=logic();
+  const p=prompt('cobranca','', 'Cliente: Preciso do boleto.\n\nEquipe: Posso enviar PIX?\n\nCliente: Quero o boleto mesmo, por favor.',{});
+  assert.match(p,/Última mensagem da CLIENTE: Quero o boleto mesmo/);
+  assert.match(p,/Última resposta da EQUIPE: Posso enviar PIX/);
+  assert.match(p,/COBRANÇA/);
+  assert.match(p,/1 ou 2 frases curtas/);
+  assert.match(p,/Boleto e mensalidade/);
+  assert.doesNotMatch(p,/Consulta e voucher:/);
+});
+test('Prompt de Atendimento usa apenas seus templates e proíbe inserir cobrança',()=>{
+  const {prompt}=logic();
+  const p=prompt('atendimento','', 'Cliente: Tenho uma dúvida sobre voucher e consulta.\n\nEquipe: Como posso ajudar?',{});
+  assert.match(p,/ATENDIMENTO/);
+  assert.match(p,/Não introduza cobrança/);
+  assert.match(p,/Consulta e voucher/);
+  assert.doesNotMatch(p,/Boleto e mensalidade:/);
+});
+test('UI orienta revisão do remetente e usa respostas curtas por padrão',()=>{
+  assert.match(ui,/identifique o remetente antes de gerar/);
+  assert.match(ui,/<option value="curto" selected>/);
+});
