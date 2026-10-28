@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {handleBackup} from '../lib/freellmapi-backup.mjs';
+import {authHandler,validateCookieApi} from './auth.mjs';
 import https from 'node:https';
 import {lookup} from 'node:dns/promises';
 import {isIP} from 'node:net';
@@ -33,12 +34,14 @@ function outgoing(state){return {policy:state.policy,agents:state.agents,connect
 function strip(text){return String(text).replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g,'[CPF]').replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g,'[CNPJ]').replace(/\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b/gi,'[EMAIL]').replace(/(?:\+55\s?)?\(?\d{2}\)?[\s-]?9?\d{4}[\s-]?\d{4}\b/g,'[TELEFONE]')}
 function response(data,status=200,origin=''){const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};if(origin){headers['Access-Control-Allow-Origin']=origin;headers.Vary='Origin';headers['Access-Control-Allow-Headers']='Authorization,Content-Type';headers['Access-Control-Allow-Methods']='GET,POST,PUT,DELETE,OPTIONS'}return new Response(status===204?null:JSON.stringify(data),{status,headers})}
 async function handleWeb(req){
- const incoming=req.headers.get('origin')||'',ext=(process.env.SRA_LUCK_ALLOWED_EXTENSION_ORIGINS||'').split(',').map(x=>x.trim()).filter(x=>/^chrome-extension:\/\/[a-p]{32}$/.test(x)),web=['https://assistenteext.vercel.app',...(process.env.SRA_LUCK_ALLOWED_WEB_ORIGINS||'').split(',')].map(x=>x.trim()).filter(x=>/^https:\/\/[a-z0-9.-]+(?::443)?$/.test(x)),origin=[...ext,...web].includes(incoming)?incoming:'';
+ const incoming=req.headers.get('origin')||'',ext=(process.env.SRA_LUCK_ALLOWED_EXTENSION_ORIGINS||'').split(',').map(x=>x.trim()).filter(x=>/^chrome-extension:\/\/[a-p]{32}$/.test(x)),web=['https://assistenteext.vercel.app','https://assistenteext-ia.vercel.app',...(process.env.SRA_LUCK_ALLOWED_WEB_ORIGINS||'').split(',')].map(x=>x.trim()).filter(x=>/^https:\/\/[a-z0-9.-]+(?::443)?$/.test(x)),origin=[...ext,...web].includes(incoming)?incoming:'';
  try{
  if(incoming&&!origin)throw bad('ORIGIN_DENIED','Origem não autorizada.',403);
  if(req.method==='OPTIONS')return response(null,204,origin);
  const master=process.env.SRA_LUCK_MASTER_KEY||'',admin=process.env.SRA_LUCK_ADMIN_TOKEN||'';if(master.length<32||admin.length<32)throw bad('SERVER_NOT_CONFIGURED','Faltam segredos técnicos do backend.',503);
- const supplied=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,''),a=Buffer.from(supplied),b=Buffer.from(admin);if(a.length!==b.length||!crypto.timingSafeEqual(a,b))throw bad('UNAUTHORIZED','Token administrativo inválido.',401);
+ const supplied=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,''),a=Buffer.from(supplied),b=Buffer.from(admin);
+ const validBearer=a.length===b.length&&crypto.timingSafeEqual(a,b);
+ if(!validBearer && !(await validateCookieApi(req)))throw bad('UNAUTHORIZED','Sua sessão expirou. Entre novamente.',401);
  const parsed=new URL(req.url),route=parsed.searchParams.get('route'),path=route?'/api/'+route.replace(/^\/+/, ''):parsed.pathname;
  if(req.method==='GET'&&path==='/api/health')return response({ok:true,version:'1.4.3',provider:'freellmapi'},200,origin);
  const record=await load(),state=record.data||fresh();let version=record.version;
@@ -87,6 +90,7 @@ export default async function handler(req,res){
  try{
   const requestedPath=new URL(req.url,'https://central.invalid');
   if(requestedPath.pathname==='/api/backup' || requestedPath.searchParams.get('route')==='backup') return await handleBackup(req,res);
+  if(await authHandler(req,res))return;
   let body;
   if(!['GET','HEAD','OPTIONS'].includes(req.method)){
    if(req.body!==undefined)body=typeof req.body==='string'?req.body:JSON.stringify(req.body);

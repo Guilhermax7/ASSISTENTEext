@@ -31,6 +31,8 @@ jobs:
         run: |
           node --check api/index.mjs
           node --check api/storage.mjs
+          node --check api/auth.mjs
+          node --check admin/app.js
           node --check ../central-ia.js
       - name: Security and HTTP smoke tests (no real keys)
         working-directory: cloud-backend

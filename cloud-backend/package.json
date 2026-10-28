@@ -9,6 +9,6 @@
     "@neondatabase/serverless": "^1.2.0"
   },
   "scripts": {
-    "test": "node --test test-cloud.mjs test-backup.mjs"
+    "test": "node --test test-cloud.mjs test-backup.mjs test-auth.mjs"
   }
 }
