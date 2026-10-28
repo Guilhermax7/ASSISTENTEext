@@ -5,7 +5,7 @@ services:
     name: sra-luck-freellmapi
     runtime: image
     image:
-      url: ghcr.io/tashfeenahmed/freellmapi:v0.16.11
+      url: ghcr.io/tashfeenahmed/freellmapi:v0.16.10
     plan: free
     region: ohio
     healthCheckPath: /api/ping
