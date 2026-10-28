@@ -30,3 +30,12 @@ test('rota de backup exige segredo próprio, sem reutilizar Admin Token',async()
  const b=await call('GET','/api/index?route=backup');
  assert.equal(b.status,503); assert.equal(b.body.error.code,'BACKUP_NOT_CONFIGURED');
 });
+
+test('regressão: tempo de espera do FreeLLMAPI comporta despertar da Render',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const server=readFileSync(new URL('./api/index.mjs',import.meta.url),'utf8');
+ const client=readFileSync(new URL('../central-ia.js',import.meta.url),'utf8');
+ assert.match(server,/timeout:50000/);
+ assert.match(server,/PROVIDER_WAKING/);
+ assert.match(client,/c\.abort\(\),57000/);
+});
