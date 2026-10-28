@@ -1,0 +1,432 @@
+
+=== NOVO NA VERSÃO 1.4.1: CENTRAL DE IA NA NUVEM ===
+Para usar a IA sem iniciar servidor local, há backend Vercel pronto em cloud-backend/ e manual README-NUVEM.md. Precisa publicar uma vez, configurar Upstash Redis, chaves e um provedor HTTPS autorizado. Nenhum serviço real foi implantado automaticamente.
+
+SRA. LUCK PREMIUM 1.4.0 — CENTRAL DE IA MULTIPROVEDOR
+
+INSTRUÇÕES COMPLETAS: leia README-CENTRAL-IA.md (instalação do serviço seguro, variáveis, painel e limitações).
+O ZIP contém a extensão 1.3.21 preservada e o serviço auxiliar ia-server/ para conexões protegidas.
+Nenhuma chave de provedor é inserida automaticamente: configure-as na Central de IA.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.21 — OLLAMA API
+
+NOVO: suporte ao Ollama na IA Coringa de Atendimento e Cobrança.
+1. Entre em Templates > Atendimento ou Cobrança > IA Coringa > Conexão.
+2. Selecione o provedor "Ollama (local / cloud)".
+3. Selecione "No meu computador" (sem chave), "Ollama Cloud" (com chave)
+   ou "Servidor remoto HTTPS" (endpoint personalizado).
+4. Clique em "Detectar modelos disponíveis" e escolha um dos modelos retornados.
+   No modo local, o Ollama precisa estar aberto e ter um modelo instalado
+   (exemplo: terminal -> ollama pull llama3.2).
+5. Salve a conexão. A IA de Cobrança e Atendimento compartilham a configuração.
+
+ENDPOINTS NATIVOS:
+- Local: http://localhost:11434/api
+- Ollama Cloud: https://ollama.com/api
+- Remoto: URL HTTPS do Ollama ou de um proxy autenticado (se aplicável).
+- Leitura de modelos: GET /api/tags. Geração: POST /api/chat, stream:false.
+- A chave não é necessária no servidor local; é exigida pelo Ollama Cloud.
+- Usar Ollama local não envia dados ao Ollama Cloud por padrão.
+
+IMPORTANTE — CORS PARA EXTENSÕES NO OLLAMA LOCAL:
+O Ollama exige configurar a origem da extensão para acesso a partir do Chrome.
+Para maior segurança use apenas a origem da sua extensão:
+  OLLAMA_ORIGINS=chrome-extension://ID_DA_SUA_EXTENSAO
+No Windows configure uma variável de ambiente do usuário com esse nome e valor,
+encerre e reinicie o aplicativo Ollama. O ID aparece em chrome://extensions
+com o modo de desenvolvedor ativado.
+Se a detecção não funcionar, revise Ollama ativo, origem, porta e modelo instalado.
+Não exponha a API local diretamente à internet sem autenticação e HTTPS.
+
+Na seleção de provedor, os demais provedores e chaves já salvas são preservados
+até você confirmar a nova configuração. O card nunca envia mensagem à cliente automaticamente.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.20
+
+CORREÇÃO DE FALHAS TEMPORÁRIAS DE IA — HTTP 503 / 429 / 502 / 504
+- Em caso de sobrecarga do modelo, a extensão tenta novamente automaticamente com intervalos progressivos (até 3 tentativas no total).
+- O usuário vê o estado da tentativa diretamente no card da IA.
+- Se as novas tentativas falharem, aparecem os comandos “Tentar novamente” e “Trocar modelo”, sem apagar o contexto da conversa ou o rascunho.
+- Respostas 503 não são apresentadas como erro de chave de API. Erros 401/403 informam problema de autenticação, e 404 informa modelo/endpoint inexistente.
+- O cabeçalho Retry-After é respeitado; se o intervalo solicitado for longo, a extensão não insiste imediatamente.
+- Cotas ou créditos esgotados (429) são tratados separadamente de indisponibilidade temporária.
+- Nada é enviado automaticamente à cliente. O histórico é transmitido ao provedor escolhido somente sob solicitação de geração.
+- Continua possível trocar de provedor/modelo nas configurações dos cards de Cobrança e Atendimento.
+
+
+SRA. LUCK PREMIUM 1.3.17 — IA CONTEXTUAL DIRETO NOS TEMPLATES
+
+- Na aba Templates inteligentes, só há Cobrança e Atendimento.
+- Cobrança reúne os 15 modelos financeiros: cobranças, acordos, PIX, comprovantes, baixas e negociações.
+- Atendimento reúne os 15 modelos de atendimento e suporte.
+- Cada área mostra todos os seus templates em uma lista única (sem subcategorias), com os mais utilizados primeiro.
+- O ranking utiliza somente inserções registradas no navegador: se ainda não há uso, mostra sugestões iniciais sem posições inventadas; as posições 1º/2º/3º aparecem apenas para templates efetivamente utilizados.
+- Favoritos, contadores de uso, busca, calendário, inserção na conversa e botão PIX foram preservados.
+- Em cada área, o atalho de IA exibido corresponde à área selecionada.
+- Ao trocar entre Cobrança e Atendimento, a busca é limpa para mostrar a lista completa.
+- Nenhum dado antigo é apagado durante a atualização. Não desinstale a extensão: substitua os arquivos e clique em Recarregar no chrome://extensions.
+
+SRA. LUCK PREMIUM 1.3.15 — ASSISTENTE DE IA INTERATIVO
+
+NOVO: Templates inteligentes > IA · Atendimento / IA · Cobrança.
+Clique em Ler conversa aberta para recuperar mensagens recentes da conversa
+no WhatsApp Web ou Tallos; confira/edite o contexto, escolha o tom e gere.
+Também pode colar o histórico manualmente se a página impedir a leitura.
+
+IMPORTANTE: para gerar texto de IA, é preciso configurar uma chave de API
+de um dos provedores disponíveis (OpenAI, Gemini, Claude ou compatíveis).
+A chave pode ser lembrada neste navegador após sua autorização.
+O armazenamento local não tem criptografia adicional da extensão;
+chaves de API de provedores diferentes não são intercambiáveis.
+Se você desativar a opção de salvar, a chave só permanece na sessão atual
+sem criptografia adicional — evite em computadores compartilhados.
+As mensagens só são transmitidas quando você clica em Gerar resposta.
+Por padrão, a extensão mascara CPF/CNPJ, telefones e emails.
+A extensão não envia as mensagens automaticamente.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.13
+
+NOVO — TEMPLATES DE ATENDIMENTO
+- Categoria azul "Atendimento" separada de Cobrança, Acordos, PIX e Baixa.
+- 15 novos modelos: saudação com primeiro nome automático, apresentação, entender pedido, consultar no sistema, encaminhamento, retorno, acolhimento, dúvidas do contrato, cancelamento, voucher, preferência de horário, confirmação de agendamento com calendário, qualificação, prazo e despedida.
+- Saudação por horário: Bom dia até 11h59; Boa tarde a partir de 12h. O primeiro nome é lido do cabeçalho da conversa no momento da inserção (maiúsculas normalizadas).
+- Todos os modelos seguem a rotina anterior: clique para inserir no campo da conversa (sem enviar); um modelo com data abre o calendário antes.
+- A aba "Todos" agrupa mensagens por assunto com cores distintas, e dentro de cada grupo os itens mais utilizados aparecem primeiro.
+- "Mais usados" reúne dados locais de uso e favoritos. Na ausência de histórico são exibidas sugestões úteis, não estatísticas inventadas.
+- Contagens e favoritos anteriores foram preservados no chrome.storage.local. Nenhuma informação da cliente é salva pelos templates.
+- Continua sendo necessário conferir os textos antes de enviá-los. Não afirme encaminhamento ou aprovação que não tenha ocorrido; os modelos expressam intenção de ação quando cabível.
+- A leitura do nome no WhatsApp Web e Tallos depende dos cabeçalhos exibidos e deve ser validada nas páginas reais.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.12
+
+NOVIDADES 1.3.12 — NEGOCIAÇÃO MAIS RÁPIDA
+- Importação de dados do Conta Azul com linhas em formato Markdown, tabulações, tabelas com datas repetidas ou deslocamento de colunas.
+- Sem limite artificial de linhas para colar; considera cada parcela encontrada, com conferência do usuário.
+- Extrai data, valor original, status e nome da cliente quando disponível. Linhas pagas ou baixadas são ignoradas.
+- Entrada manual permite quantidade de parcelas: gera os vencimentos mês a mês, repetindo o valor original.
+- Para vencimentos no dia 29, 30 ou 31, respeita o último dia dos meses mais curtos e retoma o dia original depois.
+- Mensagens de negociação com desconto foram reformuladas como CONDIÇÃO ESPECIAL DE REGULARIZAÇÃO, valorizando a economia e o total proposto.
+- Antes de COPIAR ou INSERIR a mensagem com desconto, o usuário deve confirmar que o percentual está autorizado internamente.
+- Desconto permanece incidente somente nos encargos; principal preservado.
+- Na importação, o nome extraído do Conta Azul tem prioridade sobre o nome lido da conversa para evitar trocas indevidas.
+- Demais funções preservadas: carteira, templates, botão PIX, simulador de cancelamento e alteração.
+
+NOVA FUNCIONALIDADE — SIMULAÇÕES > NEGOCIAÇÃO
+- Importe vencimento + valor de linhas do Conta Azul (tabela, tabulações, data e valor) ou registre manualmente.
+- Revise os vencimentos e valores extraídos antes de negociar; linhas pagas identificáveis não são importadas.
+- Data de atualização editável; por padrão é o dia corrente no computador.
+- Encargos: multa de 2% por parcela vencida + juros simples de 0,20% ao dia corrido de atraso sobre o valor original.
+- Não há juros compostos. A multa é lançada uma vez por parcela vencida. Multa e juros são arredondados individualmente a centavos.
+- Taxas podem ser ajustadas no painel Regras de encargos quando o contrato exigir outro percentual.
+- Exibe valor original, dias de atraso, multa, juros e atualizado individualmente e nos totais.
+- Sugestões automáticas, por atraso, número de parcelas e peso dos encargos; a equipe pode escolher outro desconto de 0% a 100%.
+- Descontos incidem EXCLUSIVAMENTE sobre os encargos. O principal nunca é reduzido.
+- Acordo pode incluir todas as parcelas ou priorizar a mais antiga. A sugestão não implica autorização para conceder descontos.
+- Gera mensagem resumida para a cliente e levantamento interno detalhado, ambos com opções de copiar ou inserir sem envio automático.
+- Nome sugerido pela conversa ativa ou por coluna da tabela, podendo ser corrigido antes de usar.
+- Importação e valores de negociação não são gravados automaticamente como contrato ou conta a receber; simulação para conferência.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.10
+
+CORREÇÃO ESPECÍFICA PARA WHATSAPP WEB
+- Ao inserir templates, chave PIX ou textos das simulações no WhatsApp Web,
+  a extensão usa a colagem do editor da conversa (Lexical), preservando as
+  linhas e os parágrafos em vez de simular dezenas de insertLineBreak.
+- A rotina do WhatsApp roda no mundo MAIN da aba para que o evento de paste
+  chegue ao editor nativo. Nunca cola em busca, lista de contatos ou outro campo.
+- O texto é inserido sem envio; revise antes de mandar.
+- Se o WhatsApp não confirmar a inserção com espaçamento, a extensão tenta
+  copiar o texto completo para a área de transferência e instrui Ctrl+V.
+  Nesse caso, confira e limpe qualquer texto que o WhatsApp tenha inserido
+  incorretamente antes de usar Ctrl+V (para evitar duplicidade).
+- A Tallos e outros editores continuam com o comportamento da versão 1.3.9.
+- Testes locais com simulador de um editor Lexical foram realizados; uma sessão
+  real do WhatsApp Web ainda deve ser validada após atualizar.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.8
+
+NOVO: LISTAS MAIS ESCURAS NA CARTEIRA DE COBRANÇA
+- Os cartões das clientes agora são em tons de ameixa escuro, acompanhando o painel.
+- As cores já configuradas de cada banco continuam as mesmas e aparecem na faixa
+  lateral, no contorno e na etiqueta com o nome do banco em cada cartão.
+- A diferenciação não depende só da cor: o banco também é identificado por texto.
+- O nome da cliente permanece claro e legível; dias em atraso continuam com
+  sinalização neutra, âmbar ou rosa conforme a urgência.
+- Ao selecionar uma cliente, o contorno usa a cor do banco e não perde destaque.
+- Filtros, clique para preencher nome, conclusão, backup, templates e PIX seguem
+  funcionando sem modificação da base de clientes.
+- As descrições das versões anteriores abaixo são mantidas apenas como histórico.
+
+SRA. LUCK — CARTEIRA PREMIUM 1.3.7
+
+CORREÇÃO DE ESPAÇAMENTO EM TODOS OS TEMPLATES
+- As mensagens agora são inseridas nos campos de conversa com quebras de linha reais.
+- Parágrafos separados por linha vazia são mantidos no WhatsApp Web e em editores compatíveis da Tallos.
+- A correção funciona para todos os 15 templates e para o atalho 🔑 PIX do topo.
+- Mensagens não são enviadas automaticamente: revise o texto antes de enviar.
+- O template Parcela em aberto segue o modelo breve solicitado, com saudação automática, primeiro nome e vencimento pelo mini calendário.
+- Campos de texto de uma linha não são usados para mensagens com parágrafos, evitando que a formatação seja perdida.
+- Se a Tallos usar um editor próprio, valide a primeira mensagem antes do envio.
+
+NOVO: BOTÃO PIX NO TOPO
+- Clique na chave 🔑 PIX no topo, de qualquer uma das duas abas, para inserir a mensagem com os dados do Sicredi diretamente na conversa.
+- O botão não envia a mensagem sozinho: confira o conteúdo e envie manualmente.
+- O mesmo texto também está na lista Templates inteligentes > PIX e comprovantes > Chave PIX — Sicredi.
+- Clique primeiro no campo de escrever da conversa no WhatsApp Web ou na Tallos, e depois no botão.
+
+SRA. LUCK — CARTEIRA DE COBRANÇA 1.3.4
+Painel lateral — nova implementação.
+
+INSTALAR
+Extraia o ZIP em uma pasta permanente. Em chrome://extensions ative o
+Modo do desenvolvedor, clique em Carregar sem compactação e selecione
+esta pasta. Fixe o ícone da extensão e clique nele para abrir a lateral.
+
+ATUALIZAR
+Faça backup, substitua os arquivos na mesma pasta usada na instalação e
+clique em Recarregar no cartão da extensão. Não remova a extensão.
+Os registros antigos são convertidos preservando nome, dias e banco.
+CPF e valores são retirados do armazenamento da nova versão.
+
+IMPORTAR POR BANCO
+1. Clique em Colar relatório.
+2. Escolha Sicredi, Sicredi Luck, BRB DF, BRB GO, Gerência ou BB.
+3. Cole o relatório completo: não precisa retirar CPF e valores do texto.
+4. Confira a quantidade e confirme.
+Todos os nomes recebem o banco escolhido. A lista desse banco é substituída;
+as listas dos outros bancos são preservadas. Use um relatório por banco.
+Nomes repetidos no mesmo relatório mantêm a primeira ocorrência, com aviso.
+A lista mostra nome, dias em badge e banco. Não mostra ou salva CPF e valor.
+O formato aceito é um nome, Em cobrança, CPF opcional, número de dias e
+valor opcional, cada informação em uma linha.
+
+PREENCHER UM NOME
+Com a carteira na lateral, clique no campo de texto da página e depois no
+nome na carteira. A extensão insere no cursor e não envia mensagens.
+O acesso a páginas HTTP e HTTPS é solicitado na instalação/atualização;
+não precisa habilitar cada aba pelo ícone. Campos protegidos não aceitam inserção. Para WhatsApp, use o
+WhatsApp Web. A extensão não insere em aplicativos fora do navegador.
+
+BACKUP
+Salvar backup exporta nome, dias e banco. Restaurar substitui a carteira
+após confirmação e aceita backups das versões anteriores desta reconstrução.
+Nenhum dado é enviado a um servidor. Desinstalar pode apagar os dados.
+Esta versão não recupera a antiga 1.8.6 e não calcula acréscimos bancários.
+
+TOPO COMPACTO
+O topo contém apenas Colar relatório. A escolha do banco aparece na importação.
+Buscar ou filtrar abre os controles opcionais de pesquisa e banco.
+
+CLIQUE E DESTAQUE
+Clique no nome ou em qualquer área do cartão para inserir automaticamente
+o nome no último campo selecionado da aba. Não há botão de copiar.
+A cliente clicada fica destacada até outra ser escolhida; a seleção é salva
+localmente e reaparece ao reabrir o painel.
+A extensão lembra o campo e a posição do cursor enquanto a página está aberta.
+Não lê nem salva o conteúdo escrito no campo. Não envia mensagens.
+
+CONCLUIR UMA CLIENTE
+Clique no botão ✓ do cartão para retirar a cliente da lista atual.
+A remoção fica salva. Esse botão não insere o nome no campo da página.
+Se importar novamente um relatório que contenha a cliente, ela volta à lista.
+
+DESIGN PREMIUM — MOTION
+Interface escura com cartões com cores por banco, nomes das clientes,
+cores próprias e badges de atraso. A seleção permanece destacada.
+Motion 14.6.0 está incluído localmente em vendor/motion.js, com a licença MIT.
+Não há scripts remotos. As animações respeitam a preferência de movimento
+reduzido do sistema. O pacote não inclui dados de demonstração.
+
+IMPORTAÇÃO COMPACTA
+Escolha o banco na linha superior, cole no campo abaixo e clique em Conferir.
+Revise a quantidade e confirme em Importar clientes.
+
+VERSÃO 1.3.1
+Cartões compactos, cores reforçadas por banco e total de todos os registros
+no topo. O total não muda quando um filtro é aplicado, mas diminui ao concluir.
+Todos os bancos ficam juntos em uma lista única, do menor para o maior atraso.
+
+ACESSO AUTOMÁTICO AUTORIZADO
+Esta versão solicita acesso permanente aos sites HTTP e HTTPS para preencher
+nomes sem autorizar cada aba. O Chrome pode pedir que você aceite a permissão
+uma vez ao atualizar. A extensão não pode aceitar esse aviso por você.
+Se o acesso estiver limitado nas configurações, abra os detalhes da extensão
+e escolha Acesso ao site > Em todos os sites. Recarregue as páginas abertas
+após atualizar. Páginas internas e loja de extensões são protegidas pelo Chrome.
+A extensão não preenche aplicativos externos ao navegador.
+
+LISTA ÚNICA
+Sem divisões ou cabeçalhos de banco. As cores e o filtro de banco são mantidos.
+A ordenação crescente de dias é aplicada à lista inteira.
+
+VISUAL 1.3.1
+Removida a faixa de cor intensa na borda inicial dos cartões.
+
+VISUAL 1.3.1
+Iniciais removidas e espaço dos nomes ampliado nos cartões.
+
+CORES 1.3.1
+O fundo inteiro dos cartões usa a cor do banco: Sicredi verde-lima, Sicredi
+Luck verde-esmeralda, BRB DF azul-índigo, BRB GO azul-ciano, Gerência laranja
+e BB amarelo. Sem faixa lateral ou iniciais. Seleção mantém a cor do banco.
+
+CONCLUSÃO INSTANTÂNEA
+O ✓ retira o cartão e atualiza o total imediatamente, sem animação nem
+reconstruir toda a lista. O salvamento acontece em segundo plano. Se falhar,
+só aquela cliente volta à lista, preservando as outras conclusões.
+
+PALETA PÉROLA 1.3.1
+Interface clara em pérola e ameixa, cartões pastel: verde-sálvia, menta,
+azul-pervinca, azul-céu, pêssego e amarelo-manteiga. Sem faixa ou iniciais.
+Seleção em contorno ameixa; brilho sutil ao passar o cursor. O ✓ é instantâneo.
+
+FUNDO 1.3.1
+Fundo da interface em ameixa profundo, com cartões pastel preservados.
+
+
+NOVA ABA — TEMPLATES INTELIGENTES (1.3.2)
+O topo agora apresenta duas abas: Carteira e Templates inteligentes.
+Clique em Templates inteligentes para abrir a área dedicada aos próximos
+modelos. Clique em Carteira para retornar sem perder o filtro, a importação
+aberta ou as clientes carregadas. A nova aba contém apenas a estrutura e
+uma tela inicial: nenhum template ou automação foi configurado ainda.
+Os dados existentes e o formato dos backups permanecem inalterados.
+
+
+TEMPLATES INTELIGENTES — VERSÃO 1.3.4
+A área agora é uma carteira compacta de modelos, sem prévia, número,
+identificação visível, campo de nome ou formulário persistente.
+
+Clique em “Parcela em aberto” para abrir o mini calendário, navegue pelos
+meses e escolha a data do vencimento. Depois da seleção, a data fica
+visível em um botão pequeno; clique nele para alterar. Use Inserir na
+conversa ou Copiar. A mensagem não é enviada automaticamente.
+
+O primeiro nome é identificado em segundo plano, pelo cabeçalho da
+conversa ativa do WhatsApp Web, Tallos ou chat compatível. Exemplo:
+BEATRIZ MARTINS vira Beatriz. A leitura se atualiza quando muda a
+conversa; ao detectar a mudança, o vencimento é limpo para impedir o uso
+de uma data associada a outra cliente. Se não for possível identificar
+o nome com segurança, o template não é inserido ou copiado e a extensão
+mostra um aviso. Nenhum nome da conversa é gravado ou enviado a servidor.
+
+Modelos adicionais podem ser incluídos no catálogo de templates em
+`templates.js`. A escolha de data é exclusiva deste primeiro modelo.
+
+Não alteramos importação, filtros, dados nem backup da Carteira. Após
+substituir os arquivos, use Recarregar na página chrome://extensions.
+
+TEMPLATES INTELIGENTES — VERSÃO 1.3.6
+A aba de templates apresenta agora 14 mensagens em lista, agrupadas em:
+  • Cobrança e acompanhamento
+  • Agendamentos
+  • PIX e comprovantes
+  • Baixa e regularização
+Há um campo de busca por nome de modelo, preparado para crescimento da lista.
+
+USO RÁPIDO
+Abra a conversa no WhatsApp Web, Tallos ou outro site com editor compatível.
+Clique no item da lista para INSERIR a mensagem diretamente no campo de
+escrita da conversa (sem enviar automaticamente e sem etapa adicional).
+Não aparece a prévia nem o botão “Inserir na conversa”.
+
+Para os modelos "Parcela em aberto", "Confirmar acordo por telefone",
+"Registrar data combinada" e "Confirmar baixa da parcela", primeiro
+aparece um mini calendário; a ESCOLHA DO DIA já insere a mensagem.
+A data não fica gravada para outras clientes.
+
+NOME E SAUDAÇÃO
+Os modelos que incluem o nome identificam somente o primeiro nome a
+partir do cabeçalho da conversa no instante do clique; BEATRIZ SOARES
+vira Beatriz. Se o nome não for detectado com segurança, a extensão avisa
+e não insere o modelo personalizado. Mensagens sem nome funcionam
+normalmente. Nada disso é enviado a serviços externos ou gravado.
+
+Nos modelos com saudação automática: até 11:59 é "bom dia" e a partir
+de 12:00 é "boa tarde", pelo relógio local do navegador. Antes das 08:00
+a saudação permanece "bom dia".
+
+A inserção é local e depende do editor de texto do site. Nos editores do
+WhatsApp Web e layouts compatíveis da Tallos foram realizados testes
+simulados. A estrutura real da Tallos pode exigir ajuste de seletor.
+A extensão nunca clica em Enviar e recomenda conferência da mensagem.
+
+Preservamos sem alteração o banco de clientes, importação, conclusão,
+busca, filtros e backup da Carteira de Cobrança. Para atualizar, extraia
+o ZIP SOBRE A MESMA PASTA e clique em Recarregar em chrome://extensions.
+Não desinstale a extensão para não comprometer os dados locais.
+
+============================================================
+VERSÃO 1.3.9 — TEMPLATES INTELIGENTES + SIMULAÇÕES RÁPIDAS
+============================================================
+
+TEMPLATES:
+- A biblioteca continua com os 15 modelos anteriores.
+- Cores por assunto: cobrança (âmbar), agendamentos (violeta), PIX
+  (verde-água) e baixa (verde).
+- Ícones individuais, rótulos objetivos e subtítulos curtos.
+- Filtros Todos, Mais usados, Cobrança, Acordos, PIX e Baixa.
+- Ordenação pelo número de inserções bem-sucedidas de cada template.
+  Contagem salva em chrome.storage.local neste navegador. Não equivale
+  a mensagens efetivamente enviadas pelo WhatsApp/Tallos.
+- Sem histórico, mostra uma lista inicial de acesso rápido sugerida.
+- Toque na estrela para favoritar/desfavoritar o template.
+- O clique continua inserindo sem envio automático; calendários somente
+  nos modelos com data; nome e saudação preservados.
+
+NOVA ABA SIMULAÇÕES:
+- Cancelamento: dados de contrato original, opção de alteração anterior,
+  pagamentos antes/depois, multa de 10% / 20% / 30% / THF / customizada;
+  calcula multa, saldo devido/restituição e eventual parcelamento da devolução.
+- Alteração: aumento/diminuição de carta, aumento de prazo e reparcelamento;
+  simula as faixas fixas de 12, 18, 24, 36, 48, 60 e 72 parcelas.
+- Tabela: 12=25%,18=32%,24=41%,36=59%,48=63%,60=77%,72=83%.
+- Diminuição da carta: a taxa administrativa não pode ficar abaixo da taxa
+  administrativa calculada/ajustada no contrato atual.
+- Histórico de faixas pagas, total pago e abatimento ajustável.
+- Seleção do prazo aprovado, com texto para cliente (todas as 7 opções)
+  e levantamento interno (apenas prazo escolhido).
+- Campos de taxa administrativa e valor de parcela podem ser substituídos
+  conforme o documento contratual, preservando as regras do HTML original.
+- Ações separadas para Copiar ou Inserir no campo da conversa, sem enviar.
+- Nome sugerido automaticamente pelo leitor da conversa, quando possível;
+  confira/complete o nome e os dados do contrato antes de encaminhar.
+
+CONTROLES E LIMITES:
+- Cálculos reproduzidos do HTML calculadora@.html fornecido pelo usuário.
+  Testes comparativos de equivalência foram executados com 8 cenários
+  de cálculo, além de comparação dos textos e levantamentos.
+- Confirme cláusulas, percentuais, pagamentos, THF e autorização antes de
+  usar a simulação como proposta. A extensão não aprova cancelamentos.
+- Os dados inseridos no formulário de simulação não são persistidos na
+  carteira; somente as contagens de uso e favoritos dos templates são salvos.
+- Os testes comparativos não substituem testes em uma conversa real na Tallos
+  ou no WhatsApp Web (campos de edição podem variar por atualização).
+
+ATUALIZAÇÃO: extrair e substituir os arquivos da extensão existente,
+sem desinstalar, e usar Recarregar em chrome://extensions.
+============================================================
+
+
+VERSÃO 1.3.14 — Corrigida a busca de nome no cabeçalho (WhatsApp e Tallos), suporte a editores em iframes e localização ampliada de campos de mensagem. Se o nome não for identificado, o modelo será inserido sem nome, com aviso claro para conferência antes do envio. Se a inserção falhar, o texto é copiado para Ctrl+V.
+
+
+VERSÃO 1.3.17 — IA INTERATIVA EMBUTIDA
+- IA de Cobrança e Atendimento são cards na lista com ranking e favoritos.
+- Um clique lê a conversa e solicita a próxima resposta da IA, sem abrir outra aba.
+- Primeira vez: selecionar provedor, modelo, endpoint e chave; opção de manter no armazenamento local.
+- Suporte: OpenAI, Google Gemini, Anthropic/Claude, OpenRouter, Groq, DeepSeek e outras APIs compatíveis com /chat/completions. Chaves não são universais entre plataformas.
+- Revise conteúdo e autorização de processamento; envio nunca é automático.
+- Para remover a chave, abra o card, clique em Provedor e depois em "Esquecer chave e conexão salvas".
+
+
+VERSÃO 1.3.18 — IA CORINGA
+* Na lista de Cobrança ou Atendimento, abra o card de IA. Dentro dele: Responder, Criar template e Repetidos.
+* Criar template: informe a ideia; a IA gera título/corpo; revise a prévia; confirme salvar. O modelo aparece na mesma lista e é mantido no armazenamento local.
+* Monitor de repetições: DESLIGADO por padrão. Ative explicitamente no card IA > Repetidos. Depois da ativação e da atualização da página de chat, registra somente padrões de mensagens realmente enviadas por você, sanitizados no navegador, sem envio automático à API. Não grava o histórico inteiro das clientes. Sugestões surgem após 3 envios do mesmo padrão. Pode desativar ou limpar a qualquer momento.
+* Para estilo pessoal da IA, alguns exemplos sanitizados mais recorrentes podem ser enviados ao provedor SOMENTE ao solicitar geração, com a opção ligada. Revise os dados antes de usar com clientes.
+* Monitoramento funciona nos sites WhatsApp Web e Tallos com editores e elementos identificados; outras versões da interface podem exigir ajustes.
+
+
+VERSÃO 1.3.20 — MODELOS DA API
+Na configuração dos cards IA, escolha o provedor e informe sua chave. A extensão tenta listar os modelos de texto disponíveis via endpoint de modelos do serviço. Você pode selecionar no menu ou digitar o identificador em "Outro modelo (manual)". Se o provedor não disponibilizar a listagem, as sugestões são apenas exemplos e podem não estar autorizadas. Consultas à API usam a chave informada exclusivamente no provedor/URL selecionado. Nenhuma conversa é enviada durante a busca de modelos.

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sra. Luck — Carteira de Cobrança</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="top-actions">
+    <nav class="top-tabs" role="tablist" aria-label="Áreas da extensão">
+      <button id="tabCarteira" class="top-tab" type="button" role="tab" aria-selected="true" aria-controls="carteiraView" tabindex="0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span>Carteira</span>
+      </button>
+      <button id="tabTemplates" class="top-tab" type="button" role="tab" aria-selected="false" aria-controls="templatesView" tabindex="-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.75 5.25L19 10l-5.25 1.75L12 17l-1.75-5.25L5 10l5.25-1.75L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16ZM4 2l.6 1.4L6 4l-1.4.6L4 6l-.6-1.4L2 4l1.4-.6L4 2Z"/></svg>
+        <span>Templates inteligentes</span>
+      </button>
+      <button id="tabSimulacoes" class="top-tab" type="button" role="tab" aria-selected="false" aria-controls="simulacoesView" tabindex="-1">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2m4 0h2M8 16h2m4 0h2"/></svg><span>Simulações</span>
+      </button>
+    </nav>
+    <button id="quickPix" class="quick-pix" type="button" aria-label="Inserir chave PIX na conversa" title="Inserir mensagem com chave PIX na conversa">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.9 12.1 9-9 2.1 2.1-2.2 2.2-2-2-2.5 2.5 2 2-2.1 2.1"/></svg>
+      <span>PIX</span>
+    </button>
+    </div>
+    <div id="walletHeader">
+      <button id="toggleImport" type="button" aria-expanded="false" aria-controls="importPanel">
+        <span class="import-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3"/><rect x="9" y="2" width="6" height="5" rx="1"/><path d="M12 10v7m-3-3 3 3 3-3"/></svg></span>
+        <span>Colar relatório</span><span class="import-plus" aria-hidden="true">＋</span>
+      </button>
+      <div class="total-strip"><span><strong id="totalNames">0</strong> <span id="totalLabel">nomes na carteira</span></span><span class="sort-note">Menor → maior atraso</span></div>
+    </div>
+  </header>
+  <main>
+    <section id="carteiraView" role="tabpanel" aria-labelledby="tabCarteira">
+      <section id="importPanel" hidden>
+        <div class="import-bank-row"><label for="importBank"><span class="import-bank-dot" aria-hidden="true"></span>Banco</label><select id="importBank"></select></div>
+        <label for="report" class="sr-only">Relatório do Monest</label>
+        <textarea id="report" rows="4" disabled placeholder="Selecione o banco para colar…"></textarea>
+        <div class="import-bottom"><span>Atualiza só este banco.</span><button id="preview" type="button" disabled>Conferir <span aria-hidden="true">↗</span></button></div>
+        <div id="importPreview" hidden><p id="previewSummary"></p><p id="previewWarning" class="warning"></p><button id="confirmImport" type="button">Importar lista</button></div>
+      </section>
+      <details class="list-tools"><summary><span class="search-symbol" aria-hidden="true"></span>Buscar ou filtrar<span class="filter-chevron" aria-hidden="true">⌄</span></summary><div class="filters"><input id="search" type="search" aria-label="Buscar nome" placeholder="Buscar cliente…"><select id="bankFilter" aria-label="Filtrar banco"></select></div></details>
+      <div id="list"></div>
+      <div id="empty" hidden><div class="empty-orbit" aria-hidden="true"><span>↗</span></div><strong>Espaço para o seu próximo passo.</strong><p>Escolha o banco e cole seu relatório.<br>Sua carteira ganha forma aqui.</p></div>
+      <footer><span class="local-note"><i aria-hidden="true"></i>Salvo neste navegador</span><div class="backup-actions"><button id="export" type="button" class="textButton">Backup ↗</button><label class="textButton" for="restore" tabindex="0">Restaurar</label><input id="restore" type="file" accept=".json,application/json" hidden></div></footer>
+    </section>
+
+    <section id="templatesView" class="templates-view" role="tabpanel" aria-labelledby="tabTemplates" hidden>
+      <div id="templatesIntro" class="templates-library">
+        <div class="templates-heading">
+          <div class="templates-hero-icon" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3Z"/><path d="M15 3v5h5M8 12h8M8 16h5"/></svg></div>
+          <h1>Templates inteligentes</h1>
+        </div>
+        <div class="template-area-tabs" id="templateFilters" role="group" aria-label="Tipo de template">
+          <button type="button" id="templateTabCobranca" class="template-area-tab active" data-category="cobranca" aria-pressed="true"><span class="area-tab-icon" aria-hidden="true">🔔</span><span>Cobrança<small id="areaCountCobranca">15 modelos</small></span></button>
+          <button type="button" id="templateTabAtendimento" class="template-area-tab" data-category="atendimento" aria-pressed="false"><span class="area-tab-icon" aria-hidden="true">💬</span><span>Atendimento<small id="areaCountAtendimento">15 modelos</small></span></button>
+        </div>
+        <div class="template-library-tools"><label for="templateSearch" class="sr-only">Buscar templates</label><input id="templateSearch" type="search" placeholder="Buscar mensagem nesta área…" autocomplete="off" aria-label="Buscar templates"><span id="templateCount" class="template-count" aria-live="polite"></span></div>
+        <div class="smart-header"><span id="templateSortLabel">🏆 Ranking · Mais usados primeiro</span><button type="button" id="templateResetSearch" title="Limpar busca e filtros">Limpar busca ×</button></div>
+        <div id="templateList" class="template-list" aria-label="Carteira de templates"></div>
+        <p id="templatesEmpty" class="templates-empty" hidden>Nenhum modelo encontrado.</p>
+      </div>
+    </section>
+
+<section id="simulacoesView" class="sim-view" role="tabpanel" aria-labelledby="tabSimulacoes" hidden>
+  <div class="sim-head"><h1>Simulações rápidas</h1><p>Regras da calculadora contratual · confira os dados antes de encaminhar</p></div>
+  <div class="sim-mode" role="group" aria-label="Tipo de simulação"><button type="button" data-sim-mode="cancelamento" class="active">↘ Cancelamento</button><button type="button" data-sim-mode="alteracao">⇄ Alteração</button><button type="button" data-sim-mode="negociacao">🤝 Negociação</button></div>
+  <div id="simContractTool" class="sim-fields">
+    <div class="sim-grid sim-identity"><label>Nome da cliente <input id="simNome" type="text" placeholder="Nome completo" autocomplete="off"/></label><label>Nº contrato/levantamento <input id="simNumero" type="text" placeholder="Nº"/></label><label class="sim-cpf">CPF <input id="simCpf" type="text" placeholder="000.000.000-00" autocomplete="off" /></label></div>
+    <div class="sim-section-label">Contrato atual</div>
+    <div class="sim-grid"><label>Valor da carta (R$) <input id="simCarta" type="text" inputmode="decimal" placeholder="10.000,00" /></label><label>Parcelamento atual <select id="simPrazo"></select></label></div>
+    <div class="sim-grid"><label>Taxa administrativa (R$) <input id="simTaxa" type="text" inputmode="decimal" placeholder="Automático" title="Deixe vazio para usar a taxa calculada" /></label><label>Parcela atual (R$) <input id="simParcela" type="text" inputmode="decimal" placeholder="Automático" title="Deixe vazio para usar a parcela calculada" /></label></div>
+    <p class="sim-micro" id="simCurrentHint">Taxa e parcela calculadas pela tabela fixa; é possível substituir os valores.</p>
+
+    <div id="simCancelBlock">
+      <div class="sim-section-label">Pagamentos e multa</div>
+      <div class="sim-grid"><label>Parcelas pagas (original) <input id="simPagas" type="number" min="0" value="0" /></label><label>Multa contratual <select id="simMulta"><option value="pct10">10% do contrato</option><option value="pct20" selected>20% do contrato</option><option value="pct30">30% do contrato</option><option value="thf">THF integral</option><option value="custom">Outro percentual</option></select></label></div>
+      <label class="sim-inline-field" id="simMultaCustomWrap" hidden>Percentual personalizado (%) <input id="simMultaCustom" type="number" min="0" step="0.01" value="20" /></label>
+      <label class="sim-switch"><input type="checkbox" id="simCancelAlterado"/> O contrato já sofreu alteração</label>
+      <div id="simCancelAlteradoFields" hidden><div class="sim-grid"><label>Nova carta (R$) <input id="simCartaAlterada" type="text" inputmode="decimal" placeholder="Se igual, deixe vazio" /></label><label>Novo parcelamento <select id="simPrazoAlterado"></select></label></div><div class="sim-grid"><label>Taxa após alteração (R$) <input id="simTaxaAlterada" type="text" inputmode="decimal" placeholder="Automático"/></label><label>Parcela após alteração (R$) <input id="simParcelaAlterada" type="text" inputmode="decimal" placeholder="Automático"/></label></div><label class="sim-inline-field">Parcelas pagas após alteração <input id="simPagasAlterada" type="number" value="0" min="0"/></label></div>
+      <div class="sim-comparison" id="simComparison"></div>
+    </div>
+
+    <div id="simAlterBlock" hidden>
+      <div class="sim-section-label">Alteração solicitada</div>
+      <label>Tipo de solicitação <select id="simTipo"><option value="aumentoCarta">Aumento da carta</option><option value="diminuicaoCarta">Diminuição da carta</option><option value="aumentoParcelas">Aumento do prazo</option><option value="reducaoParcelas">Reparcelamento / redução da parcela</option></select></label>
+      <label id="simNovoValorWrap">Novo valor da carta (R$) <input id="simNovoValor" type="text" inputmode="decimal" placeholder="Informe a carta desejada" /></label>
+      <div class="sim-section-label">Pagamentos realizados</div>
+      <div id="simPaidRows"></div>
+      <button class="sim-light-button" type="button" id="simAddPaid">+ Adicionar outra faixa paga</button>
+      <div class="sim-paid-result">Total calculado pago: <strong id="simPaidTotal">R$ 0,00</strong></div>
+      <label>Valor a abater (R$) <input id="simAbater" type="text" inputmode="decimal" placeholder="Automático: total das faixas pagas" /></label>
+      <div class="sim-section-label">Opções de parcelamento <span class="sim-micro">(toque no prazo aprovado)</span></div>
+      <div id="simOptions" class="sim-options"></div>
+    </div>
+
+    <div class="sim-result" id="simResult"><span>Resultado da simulação</span><strong id="simResultMain">Preencha o contrato</strong><small id="simResultDetails"></small></div>
+    <div id="simWarnings" class="sim-warnings" role="status"></div>
+    <div class="sim-output-header">Mensagem para a cliente <div><button type="button" data-sim-output="cliente" data-sim-action="insert">↗ Inserir</button><button type="button" data-sim-output="cliente" data-sim-action="copy">Copiar</button></div></div>
+    <pre class="sim-output" id="simTextCliente"></pre>
+    <div class="sim-output-header">Levantamento interno <div><button type="button" data-sim-output="interno" data-sim-action="insert">↗ Inserir</button><button type="button" data-sim-output="interno" data-sim-action="copy">Copiar</button></div></div>
+    <pre class="sim-output" id="simTextInterno"></pre>
+    <button type="button" class="sim-light-button" id="simReset">Limpar simulação</button>
+
+  </div>
+
+  <div id="simNegociacaoBlock" class="neg-fields" hidden>
+    <p class="neg-subtitle">Cole linhas do Conta Azul ou inclua vencimentos manualmente. Os cálculos são atualizados pela data de referência.</p>
+    <div class="sim-section-label">1 · Importar parcelas</div>
+    <label class="neg-label" for="negPaste">Dados do Conta Azul</label>
+    <textarea id="negPaste" class="neg-paste" rows="3" spellcheck="false" placeholder="Cole uma ou mais linhas: 20/10/2026 | ... | 480,00 | Em Aberto
+ou: 20/10/2026 - R$ 480,00"></textarea>
+    <div class="neg-inline-actions"><button type="button" class="neg-primary" id="negImport">↘ Identificar parcelas</button><span id="negImportHint" class="neg-hint" aria-live="polite">Cole todas as linhas desejadas, sem limite pré-definido. Aceita tabelas, tabulações e data + valor.</span></div>
+    <div class="sim-section-label">Ou adicionar manualmente</div>
+    <div class="neg-add-row"><label>Vencimento inicial<input id="negManualDate" type="date" /></label><label>Parcela (R$)<input id="negManualValue" type="text" inputmode="decimal" placeholder="855,56" /></label><label>Qtd.<input id="negManualCount" type="number" min="1" step="1" value="1" inputmode="numeric" title="Quantidade de parcelas mensais a gerar" /></label><button type="button" id="negAdd" title="Gerar parcelas mensais">+ Gerar</button></div><p class="neg-hint">Ex.: 10/06/2026 · R$ 855,56 · 4 parcelas → 10/06, 10/07, 10/08 e 10/09.</p>
+    <div class="neg-items" id="negRows" aria-live="polite"></div>
+    <div class="sim-section-label">2 · Atualização e descontos</div>
+    <div class="neg-config-grid"><label>Atualizar até <input id="negAsOf" type="date" /></label><label>Nome da cliente <input id="negName" type="text" placeholder="Automático da conversa" autocomplete="off" /></label></div>
+    <details class="neg-rules"><summary>Regras de encargos <span id="negRuleBadge">Multa 2% + juros 0,20%/dia</span></summary>
+      <div class="neg-config-grid"><label>Multa única por parcela (%) <input id="negFinePct" type="number" min="0" max="100" step="0.01" value="2" /></label><label>Juros simples ao dia (%) <input id="negDailyPct" type="number" min="0" max="100" step="0.01" value="0.20" /></label></div>
+      <p class="neg-hint">Multa só após vencer. Juros simples sobre o principal × dias corridos; sem capitalização. Confira o contrato antes de conceder condições.</p>
+    </details>
+    <div class="neg-overview" id="negOverview" aria-live="polite"><span>Sem parcelas adicionadas</span></div>
+    <div class="neg-recommend" id="negRecommendation" hidden></div>
+    <div class="neg-subsection">Desconto sobre os encargos <span id="negDiscountInfo"></span></div>
+    <div class="neg-discounts" id="negDiscounts" role="group" aria-label="Condições de desconto"></div>
+    <label class="neg-custom">Percentual personalizado (%)<input type="number" id="negCustomDiscount" min="0" max="100" step="0.01" placeholder="Ex.: 65" /></label>
+    <div class="neg-scope" id="negScope" role="group" aria-label="Estratégia da negociação"><button class="active" type="button" data-neg-scope="all">Regularizar todas</button><button type="button" data-neg-scope="oldest">Começar pela mais antiga</button></div>
+    <div class="neg-result" id="negResult" aria-live="polite"><span>Proposta simulada</span><strong>Adicione uma parcela</strong></div>
+    <label class="neg-approved" id="negApprovedWrap" hidden><input type="checkbox" id="negApproved" /> <span><strong>Condição aprovada para oferecer à cliente</strong><small>Confirme somente após autorização interna do percentual escolhido. Obrigatório para inserir ou copiar a oferta com desconto.</small></span></label><p class="neg-disclaimer">O desconto é aplicado apenas aos encargos. Confirme que o percentual está autorizado antes de oferecer a condição; nenhuma mensagem é enviada automaticamente.</p>
+    <div class="sim-output-header">Mensagem para a cliente <div><button type="button" data-neg-output="cliente" data-neg-action="insert">↗ Inserir</button><button type="button" data-neg-output="cliente" data-neg-action="copy">Copiar</button></div></div>
+    <pre class="sim-output" id="negTextCliente"></pre>
+    <div class="sim-output-header">Levantamento detalhado <div><button type="button" data-neg-output="interno" data-neg-action="insert">↗ Inserir</button><button type="button" data-neg-output="interno" data-neg-action="copy">Copiar</button></div></div>
+    <pre class="sim-output" id="negTextInterno"></pre>
+    <button type="button" class="sim-light-button" id="negReset">Limpar negociação</button>
+  </div>
+</section>
+    <div id="status" role="status" aria-live="polite"></div>
+  </main>
+  <script src="vendor/motion.js"></script>
+  <script src="motion-ui.js"></script>
+  <script src="core.js"></script>
+  <script src="popup.js"></script>
+  <script src="templates.js"></script>
+  <script src="simulacoes.js"></script>
+  <script src="negociacao.js"></script>
+  <script src="ai-assistant.js"></script>
+</body>
+</html>

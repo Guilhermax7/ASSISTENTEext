@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Sra. Luck — Carteira de Cobrança",
+  "version": "1.4.1",
+  "minimum_chrome_version": "116",
+  "description": "Carteira, templates, simulações e Central de IA com hospedagem na nuvem opcional (Ollama e APIs online).",
+  "permissions": [
+    "storage",
+    "scripting",
+    "sidePanel",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "target.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://web.whatsapp.com/*",
+        "https://*.tallos.com.br/*",
+        "https://tallos.com.br/*"
+      ],
+      "js": [
+        "repeat-monitor.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "Abrir carteira na lateral"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https: http://localhost:* http://127.0.0.1:*"
+  }
+}
