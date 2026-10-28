@@ -114,7 +114,7 @@
     field(root,'key').value=''; // Não reutilizar uma chave de outro provedor ao trocar a seleção.
     field(root,'model').value=p.model;
     selectModels(root,FALLBACK[provider],p.model);
-    modelStatus(root,provider==='central'?'Modelos e agentes definidos no painel Central de IA. Use o modelo auto.':provider==='ollama'?'Buscando modelos do Ollama local, sem necessidade de chave.':'Informe sua chave para descobrir os modelos habilitados.');
+    modelStatus(root,provider==='central'?'Central de IA na Vercel. ID desta extensão: '+chrome.runtime.id+'. Modelos definidos no painel; selecione auto.':provider==='ollama'?'Buscando modelos do Ollama local, sem necessidade de chave.':'Informe sua chave para descobrir os modelos habilitados.');
     discoveryIds.set(root,(discoveryIds.get(root)||0)+1);
     updateOllamaFields(root);
     if(provider==='central')void chrome.storage.local.get('sraLuckCentralAccessV1').then(saved=>{if(field(root,'provider')?.value==='central'&&saved.sraLuckCentralAccessV1?.token){field(root,'key').value=saved.sraLuckCentralAccessV1.token;field(root,'endpoint').value=centralEndpoint(saved.sraLuckCentralAccessV1.url||PROVIDERS.central.endpoint);}});
@@ -130,7 +130,7 @@
     field(root,'mask').checked=config.mask!==false;
     selectModels(root,FALLBACK[config.provider]||[],config.model);
     updateOllamaFields(root);
-    modelStatus(root,config.provider==='ollama'?'Busque os modelos instalados no Ollama (sem chave no modo local).':config.key?'Chave informada. Busque os modelos disponíveis nesta API.':'Informe sua chave para descobrir os modelos habilitados.');
+    modelStatus(root,config.provider==='central'?'Backend: '+CENTRAL_API+' · ID da extensão: '+chrome.runtime.id+'. Se o acesso for negado, autorize este ID na Vercel.':config.provider==='ollama'?'Busque os modelos instalados no Ollama (sem chave no modo local).':config.key?'Chave informada. Busque os modelos disponíveis nesta API.':'Informe sua chave para descobrir os modelos habilitados.');
     if(config.provider==='ollama')queueDiscover(root);
   }
   function modelListingUrl(provider,endpoint){
@@ -358,7 +358,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
         if(!response.ok){const explanation=response.status===404?'Central de IA: a rota /api/generate não existe neste endereço. O backend correto é '+CENTRAL_API+'.':response.status===403?'Central de IA: acesso negado. Pode ser necessário autorizar o ID desta extensão nas origens da Vercel.':null;
           const error=new Error(data?.error?.message||explanation||`Central de IA: erro ${response.status}.`);error.retryable=data?.error?.retryable===true;throw error;}
         return String(data.text||'').trim();
-      }catch(error){if(error.name==='AbortError')throw new Error('Central de IA: solicitação excedeu o tempo limite.');if(error instanceof TypeError)throw new Error('Não foi possível conectar à Central de IA. Confira o endereço HTTPS, sua conexão e o status da hospedagem.');throw error;}
+      }catch(error){if(error.name==='AbortError')throw new Error('Central de IA: solicitação excedeu o tempo limite.');if(error instanceof TypeError)throw new Error('Não foi possível conectar à Central de IA. Confira sua conexão e autorize a origem chrome-extension://'+chrome.runtime.id+' no backend da Vercel.');throw error;}
       finally{clearTimeout(timer);}
     }
     const system=override?.system||instruction;
