@@ -16,7 +16,7 @@ async function api(route,method='GET',body){
 function node(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 async function refresh(){state=await api('/api/state');$('workspace').hidden=false;$('serverStatus').textContent=isCloud()?'● Nuvem conectada':'● Serviço local conectado';$('connectionCount').textContent=`${state.connections.length} cadastradas`;
  $('freeOnly').checked=state.policy.free_only;renderConnections();renderAgents();renderLogs();}
-function renderConnections(){const wrap=$('connections');wrap.replaceChildren();if(!state.connections.length)wrap.append(node('p','hint','Nenhuma conexão cadastrada. Adicione Ollama local ou FreeLLMAPI Desktop.'));
+function renderConnections(){const wrap=$('connections');wrap.replaceChildren();if(!state.connections.length)wrap.append(node('p','hint','Nenhuma conexão cadastrada. Adicione sua conexão FreeLLMAPI.'));
  for(const c of state.connections){const box=node('div','conn'+(!c.enabled?' off':'')),head=node('div','heading'),label=node('strong','',`${c.name} ${c.enabled?'●':'○'}`),controls=node('div','tools');head.append(label);box.append(head,node('small','',`${c.type} · ${c.base_url} · chave ${c.has_key?'configurada':'não configurada'}`));
  if(c.last_check)box.append(node('small','',`Consulta: ${new Date(c.last_check).toLocaleString('pt-BR')} · ${c.last_latency_ms??'?'} ms`));
  const buttons=[['↻ Detectar modelos',async()=>{const r=await api(`/api/connections/${c.id}/discover`,'POST');message(`${r.models.length} modelos retornados pela API de ${c.name}.`);await refresh();}],['Testar',async()=>{const r=await api(`/api/connections/${c.id}/test`,'POST');message(`${c.name}: conexão validada · ${r.latency_ms} ms.`);await refresh();}],['Editar',async()=>{ $('connId').value=c.id;$('connName').value=c.name;$('connType').value=c.type;$('connUrl').value=c.base_url;$('connKey').value='';$('connEnabled').checked=c.enabled;window.scrollTo({top:250,behavior:'smooth'});message('Edite os campos e salve; deixe a chave vazia para preservá-la.');}],['Excluir',async()=>{if(!confirm(`Excluir a conexão ${c.name}?`))return;await api(`/api/connections/${c.id}`,'DELETE');await refresh();}]];
@@ -24,6 +24,7 @@ function renderConnections(){const wrap=$('connections');wrap.replaceChildren();
  const list=node('div','models');for(const m of c.models||[])list.append(node('span','model '+m.status,`${m.id} · ${m.status}`));if(list.childNodes.length)box.append(list);wrap.append(box);
  }}
 function fillModelOptions(select,id,selected){select.replaceChildren();option(select,'','Selecione um modelo');const c=state.connections.find(c=>c.id===id);for(const m of c?.models||[])option(select,m.id,`${m.id} (${m.status})`);
+ for(const id of ['auto','auto:fast','auto:smart','auto:reliable'])if(![...select.options].some(o=>o.value===id))option(select,id,id+' (estratégia: confirmar disponibilidade)');
  option(select,'__manual__','Outro modelo (manual via identificador)');if(selected&&[...select.options].some(o=>o.value===selected))select.value=selected;
  else if(selected){option(select,selected,selected+' (não consultado)');select.value=selected;}
 }
@@ -41,13 +42,13 @@ function renderLogs(){const logs=$('logs');logs.replaceChildren();if(!state.logs
 }
 $('connect').onclick=async()=>{token=$('accessToken').value.trim();try{BASE=serviceUrl($('server').value.trim());await refresh();await chrome.storage.local.set({[STORAGE]:{token,url:BASE}});message(isCloud()?'Conexão na nuvem salva. Não precisa iniciar servidor no computador.':'Conexão local salva neste navegador.');}catch(e){$('serverStatus').textContent='● Falha na conexão';message(e.message);}};
 $('forget').onclick=async()=>{token='';$('accessToken').value='';$('workspace').hidden=true;await chrome.storage.local.remove(STORAGE);message('Token de acesso do serviço apagado deste navegador.');};
-$('connType').onchange=()=>{$('connUrl').value=isCloud()?'https://api.groq.com/openai/v1':['ollama','ollama_openai'].includes($('connType').value)?'http://127.0.0.1:11434':$('connType').value==='freellmapi'?'http://127.0.0.1:31415/v1':'https://api.groq.com/openai/v1';};
+$('connType').onchange=()=>{$('connUrl').value=isCloud()?'https://freellmapi.seu-dominio.example/v1':'http://127.0.0.1:31415/v1';};
 $('connClear').onclick=()=>{$('connectionForm').reset();$('connId').value='';$('connType').onchange();};
 $('connectionForm').onsubmit=async e=>{e.preventDefault();const data={id:$('connId').value||undefined,name:$('connName').value.trim(),type:$('connType').value,base_url:$('connUrl').value.trim(),enabled:$('connEnabled').checked};if($('connKey').value)data.api_key=$('connKey').value;
  try{await api('/api/connections','POST',data);$('connKey').value='';$('connId').value='';message('Conexão salva. Use Detectar modelos para verificar a disponibilidade.');await refresh();}catch(e){message(e.message);}};
 $('savePolicy').onclick=async()=>{try{const agents={};for(const name of ['cobranca','atendimento']){const root=document.querySelector(`[data-agent="${name}"]`),primary=root.querySelector('[data-field="primary"]').value,fallback=root.querySelector('[data-field="fallback"]').value;
- const model=readModel(root,'model'),fallbackModel=fallback?readModel(root,'fallbackModel'):'';
- agents[name]={primary,model,allowExternal:root.querySelector('[data-field="external"]').checked,fallback:fallback&&fallbackModel?[{id:fallback,model:fallbackModel}]:[]};}
+ const model=readModel(root,'model');
+ agents[name]={primary,model,allowExternal:root.querySelector('[data-field="external"]').checked,fallback:[]};}
  state=await api('/api/settings','PUT',{free_only:$('freeOnly').checked,agents});message('Política e modelos salvos.');await refresh();}catch(e){message(e.message);}};
 $('testRun').onclick=async()=>{if(!$('testConsent').checked){message('Confirme o consentimento para enviar a mensagem fictícia.');return;}const out=$('testOutput');out.textContent='Executando teste autorizado…';try{const d=await api('/api/generate','POST',{agent:$('testAgent').value,task:'reply',context_authorized:true,messages:[{role:'user',content:$('testMessage').value}],max_tokens:300});out.textContent=`Provedor: ${d.provider}\nModelo: ${d.model}\nLatência: ${d.latency_ms} ms\n\n${d.text}`;await refresh();}catch(e){out.textContent='Erro: '+e.message;message(e.message);}};
 $('refresh').onclick=()=>refresh().catch(e=>message(e.message));
