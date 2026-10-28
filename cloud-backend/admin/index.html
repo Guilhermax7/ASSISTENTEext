@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#121017">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'">
+<title>Sra. Luck | Central de Inteligência Artificial</title>
+<link rel="stylesheet" href="./central-ia.css">
+<link rel="stylesheet" href="./login.css">
+</head>
+<body><main class="shell">
+<header class="dashboard-header">
+<div><p class="eyebrow">SRA. LUCK · ÁREA RESTRITA</p><h1>Central de Inteligência Artificial</h1><p>Gestão de modelos e agentes de Cobrança e Atendimento.</p></div>
+<div class="header-badge">✦ SRA. LUCK</div>
+</header>
+<section id="authScreen" class="auth-screen" aria-live="polite">
+ <div class="auth-hero">
+  <div class="auth-mark" aria-hidden="true">✦</div>
+  <p class="eyebrow">ACESSO ADMINISTRATIVO</p>
+  <h2>Bem-vindo de volta.</h2>
+  <p>Faça login para acessar suas conexões e configurações. Neste navegador, você pode permanecer conectado por até 30 dias sem digitar o token técnico.</p>
+  <div class="auth-highlights"><span>🔒 Sessão protegida</span><span>☁️ Configurações na nuvem</span><span>🛡️ Acesso restrito</span></div>
+ </div>
+ <div class="auth-form-side">
+  <div id="authLoading" class="auth-loading">Verificando seu acesso...</div>
+  <form id="loginForm" class="auth-form" hidden>
+   <p class="form-eyebrow">ACESSAR SUA CONTA</p>
+   <h2>Entrar na Central</h2>
+   <label for="loginEmail">E-mail<input id="loginEmail" type="email" autocomplete="username" placeholder="seu@email.com" maxlength="150" required></label>
+   <label for="loginPassword">Senha<input id="loginPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha" minlength="12" required></label>
+   <label class="check remember"><input id="loginRemember" type="checkbox" checked> Manter conectado por 30 dias</label>
+   <button type="submit" class="primary auth-submit">Entrar no painel</button>
+   <p class="auth-hint">Sua senha não é armazenada no navegador pelo sistema. Você pode usar o gerenciador de senhas do próprio navegador.</p>
+  </form>
+  <form id="setupForm" class="auth-form" hidden>
+   <p class="form-eyebrow">CONFIGURAÇÃO INICIAL · UMA ÚNICA VEZ</p>
+   <h2>Crie seu login</h2>
+   <p class="auth-hint">Use seu Admin Token atual somente uma vez para definir uma senha pessoal. Depois, entre normalmente por e-mail e senha.</p>
+   <label for="setupEmail">E-mail de administrador<input id="setupEmail" type="email" autocomplete="username" placeholder="seu@email.com" maxlength="150" required></label>
+   <label for="setupPassword">Nova senha<input id="setupPassword" type="password" autocomplete="new-password" minlength="12" maxlength="200" placeholder="Mínimo de 12 caracteres" required></label>
+   <label for="setupConfirm">Confirmar nova senha<input id="setupConfirm" type="password" autocomplete="new-password" minlength="12" required></label>
+   <label for="setupToken">Admin Token (somente no primeiro acesso)<input id="setupToken" type="password" autocomplete="off" placeholder="Token técnico cadastrado na Vercel" required></label>
+   <button type="submit" class="primary auth-submit">Criar acesso seguro</button>
+  </form>
+  <p id="authError" class="auth-error" role="alert" hidden></p>
+ </div>
+</section>
+<div id="signedInBar" class="signed-in-bar" hidden><div><span class="signed-in-indicator"></span> Conectado como <strong id="userEmail"></strong></div><button type="button" id="logout">Sair da conta</button></div>
+<div id="workspace" hidden>
+<section class="panel"><div class="section-head"><div><h2>Conexões de IA</h2><p>Uma única conexão FreeLLMAPI. Os demais provedores e o roteamento são gerenciados por ele.</p></div><span id="connectionCount"></span></div><div id="connections" class="connections"></div><details class="new-conn" open><summary>＋ Adicionar / editar conexão</summary><form id="connectionForm"><input type="hidden" id="connId"><div class="cols"><label>Nome de identificação<input id="connName" placeholder="FreeLLMAPI" required maxlength="70"></label><label>Provedor<select id="connType"><option value="freellmapi">FreeLLMAPI — provedor unificado</option></select></label><label>Base URL<input id="connUrl" type="url" required value="https://sra-luck-freellmapi.onrender.com/v1" placeholder="https://sra-luck-freellmapi.onrender.com/v1"></label><label>Chave unificada do FreeLLMAPI <small>(as chaves da Groq e demais ficam no FreeLLMAPI)</small><input id="connKey" type="password" autocomplete="new-password" placeholder="Digite para cadastrar ou trocar"></label></div><label class="check"><input id="connEnabled" type="checkbox" checked> Conexão ativa</label><div class="actions"><button class="primary" type="submit">Salvar conexão</button><button type="button" id="connClear">Limpar formulário</button></div></form></details></section>
+<section class="panel"><div class="section-head"><div><h2>Política e agentes</h2><p>Cobrança e Atendimento possuem modelos, fallback e permissões independentes.</p></div></div><label class="check policy"><input type="checkbox" id="freeOnly" checked><span><strong>Modo custo zero — free_only</strong><small>Bloqueia serviços externos não verificados e bloqueia qualquer serviço externo sem gratuidade verificada. No modo nuvem, desative somente após autorizar um provedor online.</small></span></label><div class="agent-grid"><section class="agent" data-agent="cobranca"><h3>🤝 Cobrança humanizada</h3><label>Conexão principal<select data-field="primary"></select></label><label>Modelo principal<select data-field="model"></select></label><select data-field="fallback" hidden></select><select data-field="fallbackModel" hidden></select><label class="check"><input data-field="external" type="checkbox"> Autorizar envio de contexto para serviços externos neste agente</label></section><section class="agent" data-agent="atendimento"><h3>💬 Atendimento humanizado</h3><label>Conexão principal<select data-field="primary"></select></label><label>Modelo principal<select data-field="model"></select></label><select data-field="fallback" hidden></select><select data-field="fallbackModel" hidden></select><label class="check"><input data-field="external" type="checkbox"> Autorizar envio de contexto para serviços externos neste agente</label></section></div><div class="actions"><button class="primary" id="savePolicy">Salvar políticas e modelos</button><span class="hint">O FreeLLMAPI gerencia o fallback. Use auto, auto:fast, auto:smart ou auto:reliable quando disponíveis.</span></div></section>
+<section class="panel"><h2>Teste de execução (dados fictícios)</h2><div class="cols"><label>Agente<select id="testAgent"><option value="cobranca">Cobrança</option><option value="atendimento">Atendimento</option></select></label><label>Mensagem fictícia<input id="testMessage" value="Olá, gostaria de entender como funciona o atendimento." maxlength="500"></label></div><label class="check"><input id="testConsent" type="checkbox"> Autorizo enviar esta mensagem fictícia ao provedor configurado</label><div class="actions"><button class="primary" id="testRun">Testar resposta</button></div><pre id="testOutput" class="output">Aguardando teste…</pre></section>
+<section class="panel"><div class="section-head"><div><h2>Relatório técnico</h2><p>Registro em memória, sem textos de conversas ou credenciais.</p></div><button id="refresh">Atualizar</button></div><div id="logs" class="logs"></div></section>
+</div>
+<div class="global-status" id="message" role="status" aria-live="polite"></div>
+</main><script src="./app.js"></script></body></html>
