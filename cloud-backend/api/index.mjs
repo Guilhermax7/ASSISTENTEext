@@ -85,7 +85,7 @@ async function handleWeb(req){
 export default async function handler(req,res){
  try{
   let body;
-  if(!['GET','HEAD'].includes(req.method)){
+  if(!['GET','HEAD','OPTIONS'].includes(req.method)){
    if(req.body!==undefined)body=typeof req.body==='string'?req.body:JSON.stringify(req.body);
    else{const chunks=[];for await(const c of req)chunks.push(c);body=Buffer.concat(chunks);}
   }
