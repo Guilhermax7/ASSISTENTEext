@@ -9,10 +9,10 @@ const message=(m)=>{$('message').textContent=m;};
 function option(select,val,text){const el=document.createElement('option');el.value=val;el.textContent=text;select.add(el);}
 async function api(route,method='GET',body){
  if(!token)throw new Error('Informe seu token administrativo para conectar.');
- const c=new AbortController(),timeout=setTimeout(()=>c.abort(),35000);
+ const c=new AbortController(),timeout=setTimeout(()=>c.abort(),57000);
  try{const r=await fetch(BASE+route,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:c.signal});
  const data=await r.json();if(!r.ok)throw new Error(data?.error?.message||'Erro HTTP '+r.status);return data;
- }finally{clearTimeout(timeout);}
+ }catch(e){if(e.name==='AbortError')throw new Error('A Render demorou para responder. Aguarde um minuto e tente novamente.');throw e;}finally{clearTimeout(timeout);}
 }
 function node(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 async function refresh(){state=await api('/api/state');$('workspace').hidden=false;$('serverStatus').textContent=isCloud()?'● Nuvem conectada':'● Serviço local conectado';$('connectionCount').textContent=`${state.connections.length} cadastradas`;
@@ -20,7 +20,7 @@ async function refresh(){state=await api('/api/state');$('workspace').hidden=fal
 function renderConnections(){const wrap=$('connections');wrap.replaceChildren();if(!state.connections.length)wrap.append(node('p','hint','Nenhuma conexão cadastrada. Adicione sua conexão FreeLLMAPI.'));
  for(const c of state.connections){const box=node('div','conn'+(!c.enabled?' off':'')),head=node('div','heading'),label=node('strong','',`${c.name} ${c.enabled?'●':'○'}`),controls=node('div','tools');head.append(label);box.append(head,node('small','',`${c.type} · ${c.base_url} · chave ${c.has_key?'configurada':'não configurada'}`));
  if(c.last_check)box.append(node('small','',`Consulta: ${new Date(c.last_check).toLocaleString('pt-BR')} · ${c.last_latency_ms??'?'} ms`));
- const buttons=[['↻ Detectar modelos',async()=>{const r=await api(`/api/connections/${c.id}/discover`,'POST');message(`${r.models.length} modelos retornados pela API de ${c.name}.`);await refresh();}],['Testar',async()=>{const r=await api(`/api/connections/${c.id}/test`,'POST');message(`${c.name}: conexão validada · ${r.latency_ms} ms.`);await refresh();}],['Editar',async()=>{ $('connId').value=c.id;$('connName').value=c.name;$('connType').value=c.type;$('connUrl').value=c.base_url;$('connKey').value='';$('connEnabled').checked=c.enabled;window.scrollTo({top:250,behavior:'smooth'});message('Edite os campos e salve; deixe a chave vazia para preservá-la.');}],['Excluir',async()=>{if(!confirm(`Excluir a conexão ${c.name}?`))return;await api(`/api/connections/${c.id}`,'DELETE');await refresh();}]];
+ const buttons=[['↻ Detectar modelos',async()=>{message('Consultando modelos do FreeLLMAPI. Se a Render estiver hibernando, a primeira consulta pode demorar até um minuto.');const r=await api(`/api/connections/${c.id}/discover`,'POST');message(`${r.models.length} modelos retornados pela API de ${c.name}.`);await refresh();}],['Testar',async()=>{message('Testando conexão com a Render. Aguarde a inicialização do servidor, caso esteja hibernando.');const r=await api(`/api/connections/${c.id}/test`,'POST');message(`${c.name}: conexão validada · ${r.latency_ms} ms.`);await refresh();}],['Editar',async()=>{ $('connId').value=c.id;$('connName').value=c.name;$('connType').value=c.type;$('connUrl').value=c.base_url;$('connKey').value='';$('connEnabled').checked=c.enabled;window.scrollTo({top:250,behavior:'smooth'});message('Edite os campos e salve; deixe a chave vazia para preservá-la.');}],['Excluir',async()=>{if(!confirm(`Excluir a conexão ${c.name}?`))return;await api(`/api/connections/${c.id}`,'DELETE');await refresh();}]];
  for(const [label,fn]of buttons){const b=node('button','',label);b.addEventListener('click',()=>fn().catch(e=>message(e.message)));controls.append(b);}box.append(controls);
  const list=node('div','models');for(const m of c.models||[])list.append(node('span','model '+m.status,`${m.id} · ${m.status}`));if(list.childNodes.length)box.append(list);wrap.append(box);
  }}
