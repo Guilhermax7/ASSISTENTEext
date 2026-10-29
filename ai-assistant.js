@@ -357,6 +357,81 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     ].filter(Boolean).join('\n');
   }
   async function currentTab(){const tabs=await chrome.tabs.query({active:true,currentWindow:true});return tabs[0];}
+  // A Tallos muda o DOM com frequência. Se o remetente não estiver explícito,
+  // oferecemos dois botões e nunca pedimos que a equipe edite todo o histórico.
+  function showSpeakerReview(root){
+    const holder=root.querySelector('[data-ai-speaker-review]');
+    if(!holder)return;
+    holder.replaceChildren();
+    const list=context.pendingMessages;
+    const lastUnknown=Array.isArray(list)?list.findLastIndex(m=>m.role==='Mensagem'):-1;
+    holder.hidden=lastUnknown<0;
+    if(lastUnknown<0)return;
+    const bubble=list[lastUnknown];
+    const title=document.createElement('strong');
+    title.textContent='Quem enviou esta mensagem?';
+    const snippet=document.createElement('p');
+    snippet.className='ai-speaker-preview';
+    snippet.textContent=String(bubble?.text||'').slice(0,260);
+    const actions=document.createElement('div');
+    actions.className='ai-speaker-actions';
+    for(const [role,caption] of [['Cliente','Foi a cliente'],['Equipe','Foi a equipe']]){
+      const button=document.createElement('button');
+      button.type='button';
+      button.dataset.aiAction='speaker-confirm';
+      button.dataset.speakerRole=role;
+      button.dataset.speakerIndex=String(lastUnknown);
+      button.textContent=caption;
+      actions.append(button);
+    }
+    const hint=document.createElement('small');
+    hint.textContent='A confirmação vale só para esta conversa. Falas anteriores sem autoria não serão enviadas à IA.';
+    holder.append(title,snippet,actions,hint);
+  }
+  function safeConfirmedSuffix(messages){
+    const lastUnknown=messages.findLastIndex(m=>m.role==='Mensagem');
+    return messages.slice(lastUnknown+1).filter(m=>m.role==='Cliente'||m.role==='Equipe');
+  }
+  async function confirmSpeaker(root,mode,button){
+    const list=context.pendingMessages;
+    const role=button.dataset.speakerRole;
+    const index=Number(button.dataset.speakerIndex);
+    if(!Array.isArray(list)||!Number.isInteger(index)||index<0||index>=list.length||
+        list[index].role!=='Mensagem'||!['Equipe','Cliente'].includes(role)){
+      err(root,'A conversa mudou. Clique em Reler conversa para conferir o histórico.');return;
+    }
+    const tab=await currentTab();
+    if(!tab?.id||tab.id!==context.tabId){
+      err(root,'Você mudou de conversa ou aba. Releia antes de confirmar o remetente.');return;
+    }
+    list[index]={...list[index],role};
+    const suffix=safeConfirmedSuffix(list);
+    const last=suffix.at(-1);
+    // Evitar responder um "sim" isolado sem conhecer a pergunta anterior.
+    const lastStandalone=String(last?.text||'').trim();
+    const insufficient=suffix.length===1 && (lastStandalone.length<24||
+      /^(?:sim|nao|não|ok|pode|isso|certo|tá|ta|obrigad[ao]|beleza)[!?. ]*$/i.test(lastStandalone));
+    if(last?.role==='Cliente'&&!insufficient){
+      const verified=normalizeContext(suffix.map(m=>m.role+': '+m.text).join('\n\n'));
+      context.text=verified;
+      context.pendingMessages=null;
+      field(root,'transcript').value=verified;
+      showSpeakerReview(root);
+      const info=root.querySelector('[data-ai-context-info]');
+      if(info)info.textContent='✓ Últimas '+suffix.length+' falas confirmadas · '+context.source;
+      err(root,'');
+      await generate(mode,false);
+      return;
+    }
+    showSpeakerReview(root);
+    if(last?.role==='Equipe' && !list.some(m=>m.role==='Mensagem')){
+      err(root,'A última mensagem foi da equipe. Aguarde a resposta da cliente ou clique em Reler conversa.');return;
+    }
+    if(insufficient && !list.some(m=>m.role==='Mensagem')){
+      err(root,'A resposta da cliente depende de contexto anterior. Cole a pergunta e a resposta no histórico antes de gerar.');return;
+    }
+    err(root,'Confirme também a mensagem imediatamente anterior para que a IA compreenda a conversa.');
+  }
   async function readChat(mode,root){
     const tab=await currentTab();
     if(!tab?.id||!/^https?:\/\//.test(tab.url||''))throw new Error('Abra uma conversa na Tallos ou WhatsApp Web.');
@@ -366,10 +441,11 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const list=results.map(r=>r.result).filter(Boolean);
     const best=list.filter(r=>r.ok&&r.messages?.length).sort((a,b)=>Number(b.reliable===true)-Number(a.reliable===true)||b.messages.length-a.messages.length)[0];
     if(!best)throw new Error((list.find(x=>x.reason)?.reason||'Não foi possível ler o chat.')+' Cole o trecho da conversa abaixo.');
-    context={text:normalizeContext(best.messages.map(m=>`${m.role}: ${m.text}`).join('\n\n')),tabId:tab.id,name:'',source:best.source||'conversa'};
+    context={text:normalizeContext(best.messages.map(m=>`${m.role}: ${m.text}`).join('\n\n')),tabId:tab.id,name:'',source:best.source||'conversa',pendingMessages:best.reliable?null:best.messages.map(m=>({...m}))};
     try{context.name=await identifyCurrentName(tab.id);}catch{}
     field(root,'transcript').value=context.text;
     const info=root.querySelector('[data-ai-context-info]');if(info)info.textContent=`${best.reliable?'✓':'⚠'} ${best.messages.length} mensagens · ${context.source}${best.reliable?(best.skippedCount?' · histórico antigo incerto ignorado':' · remetentes identificados'):' · última mensagem sem autoria'}`;
+    showSpeakerReview(root);
     if(!best.reliable)throw new Error(best.reason||'A Tallos não informou a direção das mensagens mais recentes. Tente Reler conversa com o chat aberto.');
   }
   // Sobrecarregamento e limite temporário são tratados de forma diferente de erros de credenciais.
@@ -637,6 +713,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const btn=e.target.closest('[data-ai-action]');if(!btn)return;
     const root=btn.closest('.ai-inline-panel');if(!root)return;
     const mode=root.dataset.mode, act=btn.dataset.aiAction;
+    if(act==='speaker-confirm'){await confirmSpeaker(root,mode,btn);return;}
     if(act==='close'){close();return;}
     if(act==='retry'){
       if(!lastAiAttempt||lastAiAttempt.mode!==mode){err(root,'Abra o assistente e faça uma nova solicitação.');return;}
