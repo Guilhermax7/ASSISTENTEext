@@ -38,7 +38,14 @@
     }
   }else{
     const composerSelector='[contenteditable="true"][data-placeholder],[contenteditable="true"][role="textbox"],.ProseMirror[contenteditable="true"],textarea[placeholder*="digite" i],textarea[placeholder*="mensagem" i]';
-    const editors=[...document.querySelectorAll(composerSelector)].filter(visible);
+    const editorVisible=el=>{
+      if(!el||!el.isConnected||el.closest('[hidden],[aria-hidden="true"],nav,aside,[role="navigation"],[role="search"]'))return false;
+      const css=getComputedStyle(el),rect=elementRect(el);
+      return css.display!=='none'&&css.visibility!=='hidden'&&rect.width>0&&rect.height>0;
+    };
+    // Os campos de digitação da Tallos podem ficar dentro de um footer:
+    // só o leitor de mensagens deve excluir rodapés, não o editor ativo.
+    const editors=[...document.querySelectorAll(composerSelector)].filter(editorVisible);
     // Escolhe o editor selecionado, não a primeira conversa da página.
     const focus=document.activeElement;
     const composer=editors.find(el=>el===focus||el.contains?.(focus)) ||
