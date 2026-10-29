@@ -18,7 +18,8 @@
     const cleaned=clean(text);
     if(!cleaned||cleaned.length>2200||/^(?:responder|editar|copiar|reagir|enviar|digitando|anexo|mensagem apagada)$/i.test(cleaned))return;
     // Ex.: áudio no WhatsApp: "0:08 / 1,0x / 15:07" não é mensagem.
-    if(/^\d{1,2}:\d{2}(?:\s+\d+(?:[,.]\d+)?x)?(?:\s+\d{1,2}:\d{2})?$/.test(cleaned.replace(/\s+/g,' ')))return;
+    const mediaControls=cleaned.replace(/×/g,'x').replace(/\s+/g,' ').trim();
+    if(/^\d{1,2}:\d{2}(?:\s+\d+(?:[,.]\d+)?x)?(?:\s+\d{1,2}:\d{2})?$/.test(mediaControls))return;
     messages.push({role,text:cleaned,confidence});
   };
   // Cada bolha pode conter uma mensagem citada, botão de áudio, horário e
