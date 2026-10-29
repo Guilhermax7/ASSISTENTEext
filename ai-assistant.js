@@ -365,7 +365,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
   }
   function markLastSpeaker(transcript,role){
     const source=normalizeContext(transcript);
-    const markers=[...source.matchAll(/^(Cliente|Equipe|Mensagem)\\s*:\\s*(.*)$/gmi)];
+    const markers=[...source.matchAll(/^(Cliente|Equipe|Mensagem)\s*:\s*(.*)$/gmi)];
     if(!markers.length||markers.at(-1)[1].toLowerCase()!=='mensagem')
       throw new Error('Não encontrei uma última mensagem pendente de identificação. Releia a conversa.');
     const last=markers.at(-1);
@@ -377,7 +377,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
       const next=i+1<array.length?array[i+1].index:last.index;
       return source.slice(m.index,next).trim();
     }).filter(Boolean);
-    const result=[...known,role+': '+latestText].join('\\n\\n');
+    const result=[...known,role+': '+latestText].join('\n\n');
     parseConversation(result);
     return result;
   }
