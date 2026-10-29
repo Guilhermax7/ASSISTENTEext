@@ -301,7 +301,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const markers=[...source.matchAll(pattern)];
     if(!markers.length)throw new Error('Não consegui distinguir a cliente da equipe. Use o formato "Cliente: mensagem" e "Equipe: mensagem" no histórico.');
     if(markers.some(m=>m[1].toLowerCase()==='mensagem'))
-      throw new Error('Não consegui identificar a autoria das últimas falas na Tallos. Clique em Reler conversa. Se persistir, revise só as mensagens sem indicação de quem falou.');
+      throw new Error('A leitura visual não identificou todas as mensagens. Atualize o chat ativo e tente novamente.');
     const turns=markers.map((m,i)=>({
       role:m[1].toLowerCase()==='cliente'?'Cliente':'Equipe',
       text:source.slice(m.index+m[0].length-(m[2]||'').length, i+1<markers.length?markers[i+1].index:source.length).trim()
@@ -357,92 +357,35 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     ].filter(Boolean).join('\n');
   }
   async function currentTab(){const tabs=await chrome.tabs.query({active:true,currentWindow:true});return tabs[0];}
-  // A Tallos muda o DOM com frequência. Se o remetente não estiver explícito,
-  // oferecemos dois botões e nunca pedimos que a equipe edite todo o histórico.
-  // Falas ambíguas são confirmadas pela atendente, nunca adivinhadas.
+  // Sem revisão manual de remetentes: origem identificada pela posição
+  // da bolha no chat. Se a leitura for impossível, não enviar para a IA.
   function showSpeakerReview(root){
     const holder=root.querySelector('[data-ai-speaker-review]');
-    if(!holder)return;
-    holder.replaceChildren();
-    const list=context.pendingMessages;
-    const recent=Array.isArray(list)?list.slice(-8):[];
-    const offset=Array.isArray(list)?list.length-recent.length:0;
-    const unknown=recent.map((item,i)=>({...item,index:offset+i}))
-      .filter(item=>item.role==='Mensagem');
-    holder.hidden=!unknown.length;
-    if(!unknown.length)return;
-    const title=document.createElement('strong');
-    title.textContent='Confirme quem enviou '+unknown.length+' mensagens';
-    const note=document.createElement('p');
-    note.className='ai-hint';
-    note.textContent='Confira as falas na Tallos e selecione Cliente ou Equipe. A IA não vai adivinhar.';
-    holder.append(title,note);
-    for(const item of unknown){
-      const wrap=document.createElement('div');
-      wrap.className='ai-speaker-item';
-      const excerpt=document.createElement('p');
-      excerpt.className='ai-speaker-preview';
-      excerpt.textContent=String(item.text||'').slice(0,280);
-      const actions=document.createElement('div');
-      actions.className='ai-speaker-actions';
-      for(const [role,label] of [['Cliente','Cliente'],['Equipe','Equipe']]){
-        const button=document.createElement('button');
-        button.type='button';
-        button.dataset.aiAction='speaker-confirm';
-        button.dataset.speakerRole=role;
-        button.dataset.speakerIndex=String(item.index);
-        button.textContent=label;
-        actions.append(button);
-      }
-      wrap.append(excerpt,actions);
-      holder.append(wrap);
-    }
-  }
-  async function confirmSpeaker(root,mode,button){
-    const list=context.pendingMessages,role=button.dataset.speakerRole;
-    const index=Number(button.dataset.speakerIndex);
-    if(!Array.isArray(list)||!Number.isInteger(index)||index<0||index>=list.length||
-       list[index].role!=='Mensagem'||!['Equipe','Cliente'].includes(role)){
-      err(root,'A conversa mudou. Clique em Reler conversa para conferir.');return;
-    }
-    const tab=await currentTab();
-    if(!tab?.id||tab.id!==context.tabId){
-      err(root,'Você mudou de aba. Releia a conversa antes de confirmar.');return;
-    }
-    list[index]={...list[index],role,confidence:1,confirmedByOperator:true};
-    showSpeakerReview(root);
-    const recent=list.slice(-8);
-    const pending=recent.filter(item=>item.role==='Mensagem');
-    if(pending.length){
-      err(root,'Faltam '+pending.length+' mensagens. Confirme Cliente ou Equipe nas falas destacadas.');return;
-    }
-    if(recent.length<2||!recent.some(item=>item.role==='Cliente')){
-      err(root,'Preciso de pelo menos duas falas e uma mensagem da cliente para gerar com contexto.');return;
-    }
-    const verified=normalizeContext(recent.map(item=>item.role+': '+item.text).join('\n\n'));
-    context.text=verified;context.pendingMessages=null;
-    field(root,'transcript').value=verified;
-    showSpeakerReview(root);
-    const info=root.querySelector('[data-ai-context-info]');
-    if(info)info.textContent='✓ '+recent.length+' falas revisadas · '+context.source;
-    err(root,'');
-    await generate(mode,false);
+    if(holder){holder.hidden=true;holder.replaceChildren();}
   }
   async function readChat(mode,root){
     const tab=await currentTab();
     if(!tab?.id||!/^https?:\/\//.test(tab.url||''))throw new Error('Abra uma conversa na Tallos ou WhatsApp Web.');
     let results;
-    try{results=await chrome.scripting.executeScript({target:{tabId:tab.id,allFrames:true},files:['conversation-reader.js']});}
-    catch{results=await chrome.scripting.executeScript({target:{tabId:tab.id},files:['conversation-reader.js']});}
+    // Primeira tentativa SOMENTE na página ativa: não captar iframe
+    // de outra conversa, publicidade ou widget externo.
+    try{results=await chrome.scripting.executeScript({target:{tabId:tab.id},files:['conversation-reader.js']});}
+    catch(e){throw new Error('Falha ao acessar o chat ativo: '+(e?.message||'recarregue a página e a extensão.'));}
     const list=results.map(r=>r.result).filter(Boolean);
     const best=list.filter(r=>r.ok&&r.messages?.length).sort((a,b)=>Number(b.reliable===true)-Number(a.reliable===true)||b.messages.length-a.messages.length)[0];
     if(!best)throw new Error((list.find(x=>x.reason)?.reason||'Não foi possível ler o chat.')+' Cole o trecho da conversa abaixo.');
-    context={text:normalizeContext(best.messages.map(m=>`${m.role}: ${m.text}`).join('\n\n')),tabId:tab.id,name:'',source:best.source||'conversa',pendingMessages:best.reliable?null:best.messages.map(m=>({...m}))};
+    if(!best.reliable){
+      context={text:'',tabId:tab.id,name:'',source:best.source||'conversa'};
+      field(root,'transcript').value='';
+      showSpeakerReview(root);
+      throw new Error(best.reason||'Não foi possível reconhecer a posição das mensagens. Atualize o chat e tente novamente.');
+    }
+    context={text:normalizeContext(best.messages.map(m=>`${m.role}: ${m.text}`).join('\n\n')),tabId:tab.id,name:'',source:best.source||'conversa'};
     try{context.name=await identifyCurrentName(tab.id);}catch{}
     field(root,'transcript').value=context.text;
-    const info=root.querySelector('[data-ai-context-info]');if(info)info.textContent=`${best.reliable?'✓':'⚠'} ${best.messages.length} mensagens · ${context.source}${best.reliable?(best.skippedCount?' · histórico antigo incerto ignorado':' · remetentes identificados'):' · última mensagem sem autoria'}`;
+    const info=root.querySelector('[data-ai-context-info]');
+    if(info)info.textContent='✓ '+best.messages.length+' mensagens da conversa ativa · '+context.source+' · posições esquerda/direita';
     showSpeakerReview(root);
-    if(!best.reliable)throw new Error(best.reason||'A Tallos não informou a direção das mensagens mais recentes. Tente Reler conversa com o chat aberto.');
   }
   // Sobrecarregamento e limite temporário são tratados de forma diferente de erros de credenciais.
   // Até 3 chamadas no total, com pausas curtas e respeito ao Retry-After do provedor.
@@ -551,6 +494,13 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const root=panel(mode);if(!root||busy)return;
     const token=++generationToken;busy=true;lastAiAttempt={mode,kind:'reply'};err(root,'');busyLabel(root,'Lendo conversa e preparando resposta…');
     try{
+      const active=await currentTab();
+      if(!readFirst&&context.tabId&&active?.id!==context.tabId)readFirst=true;
+      if(!readFirst&&context.tabId&&active?.id===context.tabId&&context.name){
+        let activeName='';
+        try{activeName=await identifyCurrentName(active.id);}catch{}
+        if(activeName&&activeName!==context.name)readFirst=true;
+      }
       if(readFirst||!field(root,'transcript').value.trim()){
         try{await readChat(mode,root);}catch(e){
           if(token!==generationToken)return;
@@ -588,7 +538,12 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const same=openedMode===mode;
     openedMode=mode;root.hidden=false;card(mode)?.classList.add('library-ai-open');
     card(mode)?.querySelector('.library-trigger')?.setAttribute('aria-expanded','true');
-    if(same){root.scrollIntoView({block:'nearest'});return;}
+    if(same){
+      root.scrollIntoView({block:'nearest'});
+      // A aba ou a cliente pode ter mudado desde a abertura anterior.
+      await generate(mode,true);
+      return;
+    }
     err(root,'');await loadConfig();
     workflow='reply';markWorkflow(root,workflow);
     await refreshSuggestionIndicator(root);
@@ -709,7 +664,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const btn=e.target.closest('[data-ai-action]');if(!btn)return;
     const root=btn.closest('.ai-inline-panel');if(!root)return;
     const mode=root.dataset.mode, act=btn.dataset.aiAction;
-    if(act==='speaker-confirm'){await confirmSpeaker(root,mode,btn);return;}
+    // A classificação agora é totalmente automática; não há revisão por botões.
     if(act==='close'){close();return;}
     if(act==='retry'){
       if(!lastAiAttempt||lastAiAttempt.mode!==mode){err(root,'Abra o assistente e faça uma nova solicitação.');return;}
