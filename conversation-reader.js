@@ -25,6 +25,62 @@
     const copy=node.querySelector('.copyable-text');
     return clean(copy?.innerText||node.innerText||node.textContent);
   };
+
+  // WhatsApp e Tallos: a posição real da bolha prevalece sobre nomes de classes
+  // que variam entre versões. Esquerda = Cliente; direita = Equipe.
+  function detectVisualSide(node,paneRect){
+    if(!paneRect||paneRect.width<200)return null;
+    const search='[data-testid="msg-text"],[data-testid*="message-text"],.selectable-text,.copyable-text,[class*="message-text"],[class*="messageText"],[class*="text-content"],[class*="textContent"],[class*="bubble-content"],[class*="bubbleContent"]';
+    let elements=[...node.querySelectorAll(search)].filter(visible);
+    // Quando o site não fornece seletores semânticos, localizamos o texto
+    // efetivamente renderizado, e não a linha de largura total.
+    if(!elements.length){
+      const descendants=[...node.querySelectorAll('span,p,div')].slice(0,350);
+      elements=descendants.filter(el=>{
+        if(!visible(el))return false;
+        const text=clean(el.innerText||el.textContent);
+        if(!text||text.length>2000||/^(?:\d{1,2}:\d{2}|\d+[.,]\dx|ok)$/i.test(text))return false;
+        return ![...el.children].some(child=>clean(child.innerText||child.textContent)===text);
+      });
+    }
+    const validRect=el=>{
+      if(!el)return false;
+      const box=elementRect(el);
+      return box.width>=12&&box.height>=6&&box.width<paneRect.width*0.96&&
+        box.left>=paneRect.left-30&&box.right<=paneRect.right+30;
+    };
+    elements=elements.filter(validRect);
+    // Mensagens compostas de múltiplas linhas podem ter vários blocos:
+    // priorizamos o corpo mais informativo, não o horário da mensagem.
+    elements.sort((a,b)=>{
+      const score=el=>{
+        const t=clean(el.innerText||el.textContent);
+        const r=elementRect(el);
+        return Math.min(t.length,450)+(r.width>=50?25:0);
+      };
+      return score(b)-score(a);
+    });
+    const anchor=elements[0]||node;
+    // A bolha colorida costuma ser um ancestral do texto.
+    // Se não existir, a própria posição do texto funciona.
+    let selected=anchor,cursor=anchor;
+    for(let steps=0;cursor&&steps<6;steps++,cursor=cursor.parentElement){
+      if(cursor!==node&&!node.contains(cursor))break;
+      if(!validRect(cursor))continue;
+      const bg=String(getComputedStyle(cursor).backgroundColor||'').replace(/\s+/g,'').toLowerCase();
+      const colored=bg&&bg!=='transparent'&&bg!=='rgba(0,0,0,0)'&&bg!=='#00000000';
+      if(colored){selected=cursor;break;}
+    }
+    if(!validRect(selected))return null;
+    const rect=elementRect(selected);
+    const leftGap=Math.max(0,rect.left-paneRect.left);
+    const rightGap=Math.max(0,paneRect.right-rect.right);
+    const delta=leftGap-rightGap;
+    const threshold=Math.max(22,paneRect.width*0.085);
+    if(delta>threshold)return {role:'Equipe',confidence:0.96,method:'visual-right'};
+    if(delta< -threshold)return {role:'Cliente',confidence:0.96,method:'visual-left'};
+    return null;
+  }
   if(wa){
     const main=document.querySelector('#main');
     if(!main)return {ok:false,source:'WhatsApp Web',messages:[],reason:'Abra uma conversa no WhatsApp Web.'};
@@ -32,9 +88,12 @@
     const nodes=wrappers.length?wrappers:[...main.querySelectorAll('[data-testid="msg-container"]')].filter(visible);
     for(const node of nodes){
       const wrapper=node.closest('.message-in,.message-out')||node;
-      const role=wrapper.classList.contains('message-out')?'Equipe':wrapper.classList.contains('message-in')?'Cliente':'Mensagem';
+      const declared=wrapper.classList.contains('message-out')?'Equipe':wrapper.classList.contains('message-in')?'Cliente':null;
+      const visual=detectVisualSide(node,elementRect(main));
+      // O marcador message-in/out é explícito; quando ausente, medir a bolha.
+      const role=declared||visual?.role||'Mensagem';
       const text=textFrom(node,'.copyable-text .selectable-text,[data-testid="msg-text"],.message-text');
-      add(role,text,role==='Mensagem'?0:1);
+      add(role,text,role==='Mensagem'?0:(declared?1:visual.confidence));
     }
   }else{
     const composerSelector='[contenteditable="true"][data-placeholder],[contenteditable="true"][role="textbox"],.ProseMirror[contenteditable="true"],textarea[placeholder*="digite" i],textarea[placeholder*="mensagem" i]';
@@ -85,7 +144,13 @@
     nodes=nodes.filter(el=>!nodes.some(other=>other!==el&&el.contains(other)));
     // As versões da Tallos podem expor a direção via data-*, classes CSS,
     // flexbox ou posição da bolha. Nunca inferir pelo conteúdo da mensagem.
+    // O editor ocupa aproximadamente a mesma largura da conversa. Isso evita
+    // confundir a largura de cada linha de mensagem com a largura do chat.
+    const rootBox=elementRect(root);
+    const viewport=editor.width>=240?editor:rootBox;
     function detectRole(node){
+      const visual=detectVisualSide(node,viewport);
+      if(visual)return visual;
       const markers=[];
       let current=node,depth=0;
       // Não ler classes do contêiner compartilhado por conversas ou mensagens.
@@ -181,7 +246,7 @@
     }
     for(const node of nodes){
       const {role,confidence}=detectRole(node);
-      const text=textFrom(node,'[data-testid*="message-text"],[class*="message-text"],[class*="messageText"],[class*="text-content"],[class*="textContent"]');
+      const text=textFrom(node,'[data-testid*="message-text"],[class*="message-text"],[class*="messageText"],[class*="text-content"],[class*="textContent"],.selectable-text,.copyable-text');
       add(role,text,confidence);
     }
   }
@@ -206,6 +271,6 @@
   return {ok:true,source:wa?'WhatsApp Web':'Tallos',
     messages:reliable?usable:recent,
     reliable,unknownRecent:unknown,skippedCount:skipped,
-    reason:reliable?(skipped?'Algumas mensagens anteriores sem remetente foram desconsideradas.':''):
-      'A Tallos não identificou quem enviou algumas falas. Confirme Cliente/Equipe nos botões abaixo antes de gerar.'};
+    reason:reliable?(skipped?'Mensagens antigas sem identificação foram descartadas.':''):
+      'Não foi possível localizar visualmente as bolhas da conversa ativa. Atualize a página do chat e tente novamente.'};
 })();
