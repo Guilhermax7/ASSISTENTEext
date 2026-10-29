@@ -90,7 +90,7 @@ test('Tallos: com duas conversas abertas seleciona o editor focado, nunca o prim
       sel==='[class*="messages-list"]'?[leftRoot,rightRoot]:[]
   };
   const out=vm.runInNewContext(reader,{location:{hostname:'app.tallos.com.br'},document:doc,getComputedStyle:style});
-  assert.equal(out.reliable,true);
+  assert.equal(out.reliable,true,JSON.stringify(out));
   assert.equal(out.messages.length,1);
   assert.match(out.messages[0].text,/Cliente certa/);
   assert.doesNotMatch(out.messages[0].text,/outro chat/);
@@ -118,7 +118,7 @@ test('Tallos: autoria incerta bloqueia geração automática em vez de inventar 
   assert.equal(out.reliable,false);
   assert.equal(out.unknownRecent,1);
   assert.equal(out.messages[2].role,'Mensagem');
-  assert.match(out.reason,/Tente reler com o chat aberto/);
+  assert.match(out.reason,/Confirme Cliente\\/Equipe/);
 });
 test('Tallos: mensagem antiga incerta não impede resposta às duas mensagens seguintes',()=>{
   const out=runTallos(false,true);
