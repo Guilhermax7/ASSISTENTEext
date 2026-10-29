@@ -35,7 +35,14 @@
       }catch{}
       // A prévia citada do WhatsApp é um bloco clicável dentro do balão.
       // O corpo novo é texto comum, fora deste bloco.
-      if(cur.getAttribute?.('role')==='button')return true;
+      if(cur.getAttribute?.('role')==='button'){
+        // Um botão que envolve TODO o texto da mensagem não é, por si só,
+        // uma citação. A prévia da citação tem texto próprio e existe texto
+        // adicional fora dela, dentro da mesma mensagem.
+        const all=node.querySelectorAll(MESSAGE_TEXT).length;
+        const nested=cur.querySelectorAll(MESSAGE_TEXT).length;
+        if(all>nested)return true;
+      }
       cur=cur.parentElement;
     }
     return false;
