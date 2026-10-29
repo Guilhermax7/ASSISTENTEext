@@ -37,7 +37,13 @@
       add(role,text,role==='Mensagem'?0:1);
     }
   }else{
-    const composer=document.querySelector('[contenteditable="true"][data-placeholder],[contenteditable="true"][role="textbox"],.ProseMirror[contenteditable="true"],textarea[placeholder*="digite" i],textarea[placeholder*="mensagem" i]');
+    const composerSelector='[contenteditable="true"][data-placeholder],[contenteditable="true"][role="textbox"],.ProseMirror[contenteditable="true"],textarea[placeholder*="digite" i],textarea[placeholder*="mensagem" i]';
+    const editors=[...document.querySelectorAll(composerSelector)].filter(visible);
+    // Escolhe o editor selecionado, não a primeira conversa da página.
+    const focus=document.activeElement;
+    const composer=editors.find(el=>el===focus||el.contains?.(focus)) ||
+      editors.find(el=>el.getAttribute?.('data-sra-luck-last-composer')==='true') ||
+      editors.at(-1)||document.querySelector(composerSelector);
     if(!composer)return {ok:false,source:'Tallos',messages:[],reason:'Abra uma conversa da Tallos com o campo de digitação disponível.'};
     const editor=elementRect(composer);
     const candidates=[
@@ -135,8 +141,10 @@
       // Comparar também a bolha interna: muitas mensagens Tallos têm linha
       // de largura total; medir essa linha daria falso "Mensagem".
       const bubble=node.querySelector?.('[data-testid*="message-bubble"],[class*="message-bubble"],[class*="messageBubble"],[class*="bubble"],[class*="Bubble"]');
+      const textBlock=node.querySelector?.('[data-testid*="message-text"],[class*="message-text"],[class*="messageText"],[class*="text-content"],[class*="textContent"],.selectable-text');
       const rootRect=elementRect(root);
-      const rect=elementRect(bubble||node);
+      // Uma linha Tallos pode ocupar toda a largura; medir o texto interno.
+      const rect=elementRect(bubble||textBlock||node);
       if(rootRect.width>200&&rect.width>30&&rect.width<rootRect.width*0.84){
         const leftGap=rect.left-rootRect.left,rightGap=rootRect.right-rect.right;
         const difference=leftGap-rightGap;
