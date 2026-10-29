@@ -301,7 +301,7 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     const markers=[...source.matchAll(pattern)];
     if(!markers.length)throw new Error('Não consegui distinguir a cliente da equipe. Use o formato "Cliente: mensagem" e "Equipe: mensagem" no histórico.');
     if(markers.some(m=>m[1].toLowerCase()==='mensagem'))
-      throw new Error('Há mensagens sem remetente identificado. No histórico abaixo, substitua "Mensagem:" por "Cliente:" ou "Equipe:" depois de conferir a Tallos.');
+      throw new Error('Não consegui identificar a autoria das últimas falas na Tallos. Clique em Reler conversa. Se persistir, revise só as mensagens sem indicação de quem falou.');
     const turns=markers.map((m,i)=>({
       role:m[1].toLowerCase()==='cliente'?'Cliente':'Equipe',
       text:source.slice(m.index+m[0].length-(m[2]||'').length, i+1<markers.length?markers[i+1].index:source.length).trim()
@@ -369,8 +369,8 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     context={text:normalizeContext(best.messages.map(m=>`${m.role}: ${m.text}`).join('\n\n')),tabId:tab.id,name:'',source:best.source||'conversa'};
     try{context.name=await identifyCurrentName(tab.id);}catch{}
     field(root,'transcript').value=context.text;
-    const info=root.querySelector('[data-ai-context-info]');if(info)info.textContent=`${best.reliable?'✓':'⚠'} ${best.messages.length} mensagens · ${context.source}${best.reliable?' · remetentes identificados':' · revisar remetentes'}`;
-    if(!best.reliable)throw new Error(best.reason||'Não foi possível identificar os remetentes com segurança. Confirme cada "Mensagem:" como Cliente ou Equipe antes de gerar.');
+    const info=root.querySelector('[data-ai-context-info]');if(info)info.textContent=`${best.reliable?'✓':'⚠'} ${best.messages.length} mensagens · ${context.source}${best.reliable?(best.skippedCount?' · histórico antigo incerto ignorado':' · remetentes identificados'):' · última mensagem sem autoria'}`;
+    if(!best.reliable)throw new Error(best.reason||'A Tallos não informou a direção das mensagens mais recentes. Tente Reler conversa com o chat aberto.');
   }
   // Sobrecarregamento e limite temporário são tratados de forma diferente de erros de credenciais.
   // Até 3 chamadas no total, com pausas curtas e respeito ao Retry-After do provedor.
