@@ -17,6 +17,8 @@
   const add=(role,text,confidence=1)=>{
     const cleaned=clean(text);
     if(!cleaned||cleaned.length>2200||/^(?:responder|editar|copiar|reagir|enviar|digitando|anexo|mensagem apagada)$/i.test(cleaned))return;
+    // Ex.: áudio no WhatsApp: "0:08 / 1,0x / 15:07" não é mensagem.
+    if(/^\d{1,2}:\d{2}(?:\s+\d+(?:[,.]\d+)?x)?(?:\s+\d{1,2}:\d{2})?$/.test(cleaned.replace(/\s+/g,' ')))return;
     messages.push({role,text:cleaned,confidence});
   };
   const textFrom=(node,selectors)=>{
