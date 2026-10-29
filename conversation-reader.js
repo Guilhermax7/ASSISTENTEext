@@ -21,13 +21,48 @@
     if(/^\d{1,2}:\d{2}(?:\s+\d+(?:[,.]\d+)?x)?(?:\s+\d{1,2}:\d{2})?$/.test(cleaned.replace(/\s+/g,' ')))return;
     messages.push({role,text:cleaned,confidence});
   };
-  const textFrom=(node,selectors)=>{
-    const found=[...node.querySelectorAll(selectors)].filter(el=>visible(el)&&!el.querySelector(selectors));
-    if(found.length)return clean(found.map(el=>el.innerText||el.textContent).join('\n'));
-    const copy=node.querySelector('.copyable-text');
-    return clean(copy?.innerText||node.innerText||node.textContent);
-  };
-
+  // Cada bolha pode conter uma mensagem citada, botão de áudio, horário e
+  // anexos. Apenas o corpo da mensagem ATUAL integra o histórico.
+  const QUOTE='[data-testid*="quoted" i],[data-testid*="reply-preview" i],[data-testid*="reply-context" i],[class*="quoted" i],[class*="reply-preview" i],[class*="replyPreview"],[aria-label*="mensagem citada" i],[aria-label*="quoted message" i]';
+  const MEDIA='[data-testid*="audio" i],[data-testid*="ptt" i],[data-testid*="document" i],[data-icon*="audio" i],[data-icon*="document" i],[data-icon*="ptt" i],audio,video';
+  const MESSAGE_TEXT='.selectable-text,[data-testid="msg-text"],[data-testid*="message-text"],[class*="message-text"],[class*="messageText"],[class*="text-content"],[class*="textContent"]';
+  function insideQuotedPart(el,node){
+    let cur=el;
+    while(cur&&cur!==node){
+      try{
+        if(cur.matches?.(QUOTE))return true;
+      }catch{}
+      // A prévia citada do WhatsApp é um bloco clicável dentro do balão.
+      // O corpo novo é texto comum, fora deste bloco.
+      if(cur.getAttribute?.('role')==='button')return true;
+      cur=cur.parentElement;
+    }
+    return false;
+  }
+  function extractOwnText(node,source){
+    const selectors=source==='wa'
+      ?'.selectable-text.copyable-text,.copyable-text .selectable-text,.selectable-text,[data-testid="msg-text"],[data-testid="caption"]'
+      :MESSAGE_TEXT;
+    const leaves=[...node.querySelectorAll(selectors)]
+      .filter(el=>visible(el)&&!insideQuotedPart(el,node))
+      .filter(el=>![...el.querySelectorAll(selectors)].some(child=>visible(child)&&!insideQuotedPart(child,node)));
+    // Evitar incluir o mesmo corpo duas vezes por causa de wrappers aninhados.
+    const chunks=[];
+    for(const el of leaves){
+      const value=clean(el.innerText||el.textContent);
+      if(value&&!chunks.includes(value))chunks.push(value);
+    }
+    if(chunks.length)return clean(chunks.join('\n'));
+    // Mensagens sem texto (áudio, documento, imagem) não devem ser
+    // interpretadas por sua interface: duração, velocidade, arquivo ou hora.
+    if(node.querySelector(MEDIA))return '';
+    // Fallback restrito: corpo textual simples, sem as prévias citadas.
+    const copy=node.querySelector('.copyable-text,[data-testid="msg-text"],[dir="auto"]');
+    if(!copy||insideQuotedPart(copy,node))return '';
+    const clone=copy.cloneNode(true);
+    for(const el of [...clone.querySelectorAll(QUOTE+',[role="button"],[data-testid*="time" i],[data-testid*="metadata" i]')])el.remove();
+    return clean(clone.textContent);
+  }
   // WhatsApp e Tallos: a posição real da bolha prevalece sobre nomes de classes
   // que variam entre versões. Esquerda = Cliente; direita = Equipe.
   function detectVisualSide(node,paneRect){
@@ -94,7 +129,7 @@
       const visual=detectVisualSide(node,elementRect(main));
       // O marcador message-in/out é explícito; quando ausente, medir a bolha.
       const role=declared||visual?.role||'Mensagem';
-      const text=textFrom(node,'.copyable-text .selectable-text,[data-testid="msg-text"],.message-text');
+      const text=extractOwnText(node,'wa');
       add(role,text,role==='Mensagem'?0:(declared?1:visual.confidence));
     }
   }else{
@@ -248,7 +283,7 @@
     }
     for(const node of nodes){
       const {role,confidence}=detectRole(node);
-      const text=textFrom(node,'[data-testid*="message-text"],[class*="message-text"],[class*="messageText"],[class*="text-content"],[class*="textContent"],.selectable-text,.copyable-text');
+      const text=extractOwnText(node,'tallos');
       add(role,text,confidence);
     }
   }
