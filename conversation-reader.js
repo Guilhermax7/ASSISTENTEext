@@ -52,7 +52,9 @@
       '[class*="chat-messages"]','[class*="chatMessages"]',
       '[class*="conversation-messages"]','[class*="conversationMessages"]',
       '[class*="message-container"]','[class*="messages-container"]',
-      '[class*="chat-body"]','[class*="conversation-body"]'
+      '[class*="chat-body"]','[class*="conversation-body"]',
+      '[class*="chat-history"]','[class*="ChatHistory"]','[class*="messages-wrapper"]',
+      '[class*="messagesWrapper"]','[class*="message-list-container"]','[data-testid*="chat-scroll"]'
     ];
     const near=el=>{
       const r=elementRect(el);
@@ -66,12 +68,12 @@
     if(!root){
       let parent=composer.parentElement;
       for(let i=0;i<7&&parent&&parent!==document.body;i++,parent=parent.parentElement){
-        const count=parent.querySelectorAll('[class*="message-bubble"],[class*="messageBubble"],[class*="message-item"],[class*="messageItem"],[class*="chat-message"],[data-testid*="message-item"]').length;
+        const count=parent.querySelectorAll('[data-message-id],[class*="message-bubble"],[class*="messageBubble"],[class*="message-item"],[class*="messageItem"],[class*="chat-message"],[class*="chat-bubble"],[class*="message-row"],[data-testid*="message-item"]').length;
         if(count>0){root=parent;break;}
       }
     }
     if(!root)return {ok:false,source:'Tallos',messages:[],reason:'Não encontrei a conversa ativa nesta versão da Tallos. Cole as últimas mensagens manualmente.'};
-    const selector='[data-testid*="message-item"],[data-testid*="message-bubble"],[class*="message-bubble"],[class*="messageBubble"],[class*="message-item"],[class*="messageItem"],[class*="chat-message"],[class*="chatMessage"]';
+    const selector='[data-testid*="message-item"],[data-testid*="message-bubble"],[data-testid*="msg-item"],[data-message-id],[class*="message-bubble"],[class*="messageBubble"],[class*="message-item"],[class*="messageItem"],[class*="message-row"],[class*="messageRow"],[class*="chat-message"],[class*="chatMessage"],[class*="chat-bubble"],[class*="ChatBubble"],[class*="msg-bubble"]';
     let nodes=[...root.querySelectorAll(selector)].filter(el=>visible(el)&&near(el)&&!el.contains(composer));
     nodes=nodes.filter(el=>!nodes.some(other=>other!==el&&el.contains(other)));
     // As versões da Tallos podem expor a direção via data-*, classes CSS,
@@ -81,7 +83,11 @@
       let current=node,depth=0;
       // Não ler classes do contêiner compartilhado por conversas ou mensagens.
       while(current&&current!==root&&depth++<5){
-        const keys=['class','data-direction','data-message-direction','data-sender-type',
+        // Não herdar atributos de um ancestral que misture vários remetentes.
+        if(depth>1&&current.querySelectorAll?.(selector).length>1)break;
+        const keys=['data-side','data-align','data-message-role','data-message-owner',
+          'data-author-type','data-sender-role','data-is-incoming',
+          'class','data-direction','data-message-direction','data-sender-type',
           'data-message-type','data-from-me','data-is-outbound','data-is-mine',
           'data-origin','data-testid','aria-label','data-owner'];
         for(const key of keys){
@@ -91,9 +97,9 @@
         current=current.parentElement;
       }
       // Algumas implementações deixam os metadados no elemento filho.
-      const child=node.querySelector?.('[data-direction],[data-message-direction],[data-from-me],[data-sender-type],[data-is-outbound]');
+      const child=node.querySelector?.('[data-direction],[data-message-direction],[data-from-me],[data-sender-type],[data-is-outbound],[data-is-incoming],[data-side],[data-message-owner],[data-sender-role]');
       if(child){
-        for(const key of ['data-direction','data-message-direction','data-from-me','data-sender-type','data-is-outbound']){
+        for(const key of ['data-direction','data-message-direction','data-from-me','data-sender-type','data-is-outbound','data-is-incoming','data-side','data-message-owner','data-sender-role']){
           const value=child.getAttribute?.(key);
           if(value!==null&&value!==undefined)markers.push({key,value:String(value)});
         }
@@ -101,16 +107,25 @@
       let outbound=false,inbound=false;
       for(const {key,value} of markers){
         const v=value.toLowerCase().trim();
-        if(['data-from-me','data-is-outbound','data-is-mine'].includes(key)){
-          if(v==='true'||v==='1')outbound=true;
-          if(v==='false'||v==='0')inbound=true;
-        }else if(key==='data-sender-type'||key==='data-origin'||key==='data-owner'){
+        if(['data-from-me','data-is-outbound','data-is-mine','data-is-incoming'].includes(key)){
+          if(key==='data-is-incoming'){
+            if(v==='true'||v==='1')inbound=true;
+            if(v==='false'||v==='0')outbound=true;
+          }else{
+            if(v==='true'||v==='1')outbound=true;
+            if(v==='false'||v==='0')inbound=true;
+          }
+        }else if(['data-sender-type','data-origin','data-owner','data-message-owner','data-author-type','data-sender-role','data-message-role'].includes(key)){
           if(/^(?:agent|operator|staff|business|company|me|attendant|atendente|equipe)$/.test(v))outbound=true;
           if(/^(?:client|customer|contact|user|cliente|consumer)$/.test(v))inbound=true;
-        }else if(key==='data-direction'||key==='data-message-direction'||key==='data-message-type'){
-          if(/^(?:outgoing|outbound|sent|from-me|right|mine)$/.test(v))outbound=true;
-          if(/^(?:incoming|inbound|received|left|from-client)$/.test(v))inbound=true;
+        }else if(['data-direction','data-message-direction','data-message-type','data-side','data-align'].includes(key)){
+          if(/^(?:outgoing|outbound|sent|from-me|right|mine|end|out)$/.test(v))outbound=true;
+          if(/^(?:incoming|inbound|received|left|from-client|start|in)$/.test(v))inbound=true;
         }else{
+          if(key==='aria-label'){
+            if(/mensagem (?:enviada|de saída)|sent message|enviada pela equipe/i.test(v))outbound=true;
+            if(/mensagem (?:recebida|de entrada)|received message|recebida do cliente/i.test(v))inbound=true;
+          }
           const parts=v.split(/[\s,;]+/);
           if(parts.some(p=>/^(?:outgoing|outbound|sent|mine|from-me|message-out|messageout|bubble-out|message--sent|msg-out|message-right|from-agent|agent-message|operator-message)$/.test(p)))outbound=true;
           if(parts.some(p=>/^(?:incoming|inbound|received|message-in|messagein|bubble-in|message--received|msg-in|message-left|from-client|client-message|customer-message)$/.test(p)))inbound=true;
@@ -173,12 +188,13 @@
   const unknown=recent.filter(m=>m.role==='Mensagem').length;
   const lastUnknown=recent.findLastIndex(m=>m.role==='Mensagem');
   const safeSuffix=lastUnknown>=0?recent.slice(lastUnknown+1):recent;
-  const usable=safeSuffix.some(m=>m.role==='Cliente')&&safeSuffix.length>=1?safeSuffix:[];
+  // Evitar interpretação de resposta solta sem a pergunta anterior.
+  const usable=safeSuffix.some(m=>m.role==='Cliente')&&safeSuffix.length>=2?safeSuffix:[];
   const reliable=usable.length>0;
   const skipped=lastUnknown>=0&&reliable?lastUnknown+1:0;
   return {ok:true,source:wa?'WhatsApp Web':'Tallos',
     messages:reliable?usable:recent,
     reliable,unknownRecent:unknown,skippedCount:skipped,
     reason:reliable?(skipped?'Algumas mensagens anteriores sem remetente foram desconsideradas.':''):
-      'A conversa mais recente não tem remetente identificado com segurança. Tente reler com o chat aberto ou revise apenas as últimas falas.'};
+      'A Tallos não identificou quem enviou algumas falas. Confirme Cliente/Equipe nos botões abaixo antes de gerar.'};
 })();
