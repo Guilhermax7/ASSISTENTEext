@@ -44,7 +44,7 @@
     const focus=document.activeElement;
     const composer=editors.find(el=>el===focus||el.contains?.(focus)) ||
       editors.find(el=>el.getAttribute?.('data-sra-luck-last-composer')==='true') ||
-      editors.at(-1)||null;
+      editors.at(-1)||document.querySelector(composerSelector);
     if(!composer)return {ok:false,source:'Tallos',messages:[],reason:'Abra uma conversa da Tallos com o campo de digitação disponível.'};
     const editor=elementRect(composer);
     const candidates=[
