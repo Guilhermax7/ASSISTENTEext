@@ -149,6 +149,25 @@ test('Prompt de Atendimento usa apenas seus templates e proíbe inserir cobranç
   assert.match(p,/Consulta e voucher/);
   assert.doesNotMatch(p,/Boleto e mensalidade:/);
 });
+test('Confirmar somente última mensagem sem remetente não exige editar todo histórico',()=>{
+  const begin=assistant.indexOf('  function markLastSpeaker(');
+  const end=assistant.indexOf('  async function readChat(',begin);
+  assert.ok(begin>=0 && end>begin);
+  const section=assistant.slice(begin,end);
+  const original=assistant.slice(assistant.indexOf('  function parseConversation('),assistant.indexOf('  function normalizeTerms('));
+  const scope={normalizeContext: v=>String(v||'').trim()};
+  vm.runInNewContext(original+section+';this.mark=markLastSpeaker;',scope);
+  const example='Mensagem: histórico antigo sem autoria\\n\\nEquipe: Consigo verificar.\\n\\nMensagem: Preciso do boleto.';
+  const marked=scope.mark(example.replace(/\\n/g,'\n'),'Cliente');
+  assert.match(marked,/Equipe: Consigo verificar/);
+  assert.match(marked,/Cliente: Preciso do boleto/);
+  assert.doesNotMatch(marked,/histórico antigo sem autoria/);
+});
+test('Extensão exibe botões de autoria quando o último turno Tallos for desconhecido',()=>{
+  assert.match(ui,/data-ai-action="last-is-client"/);
+  assert.match(ui,/data-ai-action="last-is-team"/);
+  assert.match(assistant,/function markLastSpeaker/);
+});
 test('UI orienta revisão do remetente e usa respostas curtas por padrão',()=>{
   assert.match(ui,/identifica automaticamente/);
   assert.match(ui,/<option value="curto" selected>/);
