@@ -70,6 +70,35 @@ function runTallosLayout(){
     getComputedStyle:style
   });
 }
+
+test('Tallos: com duas conversas abertas seleciona o editor focado, nunca o primeiro',()=>{
+  const leftRoot=element({classes:['messages-list'],rect:{left:40,right:530,width:490,height:380,top:100,bottom:480}});
+  const rightRoot=element({classes:['messages-list'],rect:{left:650,right:1180,width:530,height:380,top:100,bottom:480}});
+  const leftMsg=element({classes:['message-item','incoming'],text:'Mensagem errada de outro chat.',rect:{left:75,right:300,width:225,height:50,top:210,bottom:260}});
+  const rightMsg=element({classes:['message-item','incoming'],text:'Cliente certa pediu segunda via.',rect:{left:690,right:930,width:240,height:50,top:210,bottom:260}});
+  leftRoot.querySelectorAll=s=>s.includes('message-item')?[leftMsg]:[];
+  rightRoot.querySelectorAll=s=>s.includes('message-item')?[rightMsg]:[];
+  leftMsg.parentElement=leftRoot;rightMsg.parentElement=rightRoot;
+  const firstEditor=element({rect:{left:60,right:500,width:440,height:45,top:510,bottom:555}});
+  const activeEditor=element({rect:{left:680,right:1150,width:470,height:45,top:510,bottom:555}});
+  const doc={
+    body:{},activeElement:activeEditor,
+    querySelector:sel=>sel.includes('contenteditable')?firstEditor:null,
+    querySelectorAll:sel=>sel.includes('contenteditable')?[firstEditor,activeEditor]:
+      sel==='[class*="messages-list"]'?[leftRoot,rightRoot]:[]
+  };
+  const out=vm.runInNewContext(reader,{location:{hostname:'app.tallos.com.br'},document:doc,getComputedStyle:style});
+  assert.equal(out.reliable,true);
+  assert.equal(out.messages.length,1);
+  assert.match(out.messages[0].text,/Cliente certa/);
+  assert.doesNotMatch(out.messages[0].text,/outro chat/);
+});
+test('Seleção do editor Tallos mantém marcação local sem armazenar conteúdo de mensagens',()=>{
+  const target=readFileSync(new URL('./target.js',import.meta.url),'utf8');
+  assert.match(target,/data-sra-luck-last-composer/);
+  assert.match(reader,/data-sra-luck-last-composer/);
+  assert.match(reader,/textBlock\|\|node/);
+});
 test('WhatsApp: distingue mensagens da cliente e da equipe e preserva ordem',()=>{
   const out=runWA();
   assert.equal(out.ok,true);
