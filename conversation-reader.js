@@ -114,21 +114,24 @@
       if(outbound||inbound)return {role:outbound?'Equipe':'Cliente',confidence:1,method:'metadata'};
       // Para o layout em flex, alinhamento do elemento que contém a bolha.
       // Só aceitar sinais unívocos; "justify-between" ou "center" não contam.
-      let cssOut=false,cssIn=false,container=node,hops=0;
+      let container=node,hops=0;
       while(container&&container!==root&&hops++<4){
         const cls=String(container.getAttribute?.('class')||'').toLowerCase().split(/\s+/);
-        if(cls.some(c=>/^(?:justify-end|items-end|self-end|ml-auto|float-right|flex-row-reverse)$/.test(c)))cssOut=true;
-        if(cls.some(c=>/^(?:justify-start|items-start|self-start|mr-auto|float-left)$/.test(c)))cssIn=true;
+        const out=cls.some(c=>/^(?:justify-end|self-end|ml-auto|float-right|flex-row-reverse)$/.test(c));
+        const ins=cls.some(c=>/^(?:justify-start|self-start|mr-auto|float-left)$/.test(c));
+        if(out!==ins)return {role:out?'Equipe':'Cliente',confidence:0.9,method:'layout-class'};
+        if(out&&ins)break;
         const st=getComputedStyle(container);
-        if(st.alignSelf==='flex-end'||st.marginLeft==='auto'&&st.marginRight!=='auto')cssOut=true;
-        if(st.alignSelf==='flex-start'||st.marginRight==='auto'&&st.marginLeft!=='auto')cssIn=true;
-        if(st.display==='flex'||st.display==='inline-flex'){
-          if(st.justifyContent==='flex-end')cssOut=true;
-          if(st.justifyContent==='flex-start')cssIn=true;
-        }
+        const row=elementRect(container).width>elementRect(root).width*0.65;
+        const styleOut=st.alignSelf==='flex-end' ||
+          st.marginLeft==='auto'&&st.marginRight!=='auto' ||
+          row&&(st.display==='flex'||st.display==='inline-flex')&&st.justifyContent==='flex-end';
+        const styleIn=st.alignSelf==='flex-start' ||
+          st.marginRight==='auto'&&st.marginLeft!=='auto' ||
+          row&&(st.display==='flex'||st.display==='inline-flex')&&st.justifyContent==='flex-start';
+        if(styleOut!==styleIn)return {role:styleOut?'Equipe':'Cliente',confidence:0.8,method:'layout-style'};
         container=container.parentElement;
       }
-      if(cssOut!==cssIn)return {role:cssOut?'Equipe':'Cliente',confidence:0.9,method:'layout'};
       // Comparar também a bolha interna: muitas mensagens Tallos têm linha
       // de largura total; medir essa linha daria falso "Mensagem".
       const bubble=node.querySelector?.('[data-testid*="message-bubble"],[class*="message-bubble"],[class*="messageBubble"],[class*="bubble"],[class*="Bubble"]');
