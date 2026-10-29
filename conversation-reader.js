@@ -68,26 +68,77 @@
     const selector='[data-testid*="message-item"],[data-testid*="message-bubble"],[class*="message-bubble"],[class*="messageBubble"],[class*="message-item"],[class*="messageItem"],[class*="chat-message"],[class*="chatMessage"]';
     let nodes=[...root.querySelectorAll(selector)].filter(el=>visible(el)&&near(el)&&!el.contains(composer));
     nodes=nodes.filter(el=>!nodes.some(other=>other!==el&&el.contains(other)));
-    // Não presumir que "right" equivale a equipe quando a estrutura divergir.
+    // As versões da Tallos podem expor a direção via data-*, classes CSS,
+    // flexbox ou posição da bolha. Nunca inferir pelo conteúdo da mensagem.
     function detectRole(node){
-      let current=node,up=0;
-      const parts=[];
-      while(current&&current!==root&&up++<3){
-        const attrs=['class','data-direction','data-message-direction','data-sender-type','data-message-type','data-from-me','data-is-outbound','data-origin'];
-        for(const attr of attrs){const v=current.getAttribute?.(attr);if(v)parts.push(attr+'='+v);}
+      const markers=[];
+      let current=node,depth=0;
+      // Não ler classes do contêiner compartilhado por conversas ou mensagens.
+      while(current&&current!==root&&depth++<5){
+        const keys=['class','data-direction','data-message-direction','data-sender-type',
+          'data-message-type','data-from-me','data-is-outbound','data-is-mine',
+          'data-origin','data-testid','aria-label','data-owner'];
+        for(const key of keys){
+          const value=current.getAttribute?.(key);
+          if(value)markers.push({key,value:String(value)});
+        }
         current=current.parentElement;
       }
-      const desc=parts.join(' ');
-      const outgoing=/(?:^|[^a-z])(outgoing|outbound|sent|mine|from-me|is-me|message-out|messageOut|bubble-out|staff-message|agent-message|operator-message)(?:$|[^a-z])/i.test(desc)||/data-from-me=true|data-is-outbound=true|data-sender-type=(?:agent|operator|staff)|data-origin=(?:agent|business)/i.test(desc);
-      const incoming=/(?:^|[^a-z])(incoming|inbound|received|message-in|messageIn|bubble-in|client-message|customer-message)(?:$|[^a-z])/i.test(desc)||/data-from-me=false|data-is-outbound=false|data-sender-type=(?:client|customer|contact)|data-origin=(?:client|customer)/i.test(desc);
-      if(outgoing!==incoming)return {role:outgoing?'Equipe':'Cliente',confidence:1,method:'metadata'};
-      const rootRect=elementRect(root),rect=elementRect(node);
-      // Alinhamento só vale se a bolha for visivelmente deslocada para um
-      // lado e estreita em relação à coluna de mensagens.
-      if(rootRect.width>200&&rect.width>30&&rect.width<rootRect.width*0.76){
+      // Algumas implementações deixam os metadados no elemento filho.
+      const child=node.querySelector?.('[data-direction],[data-message-direction],[data-from-me],[data-sender-type],[data-is-outbound]');
+      if(child){
+        for(const key of ['data-direction','data-message-direction','data-from-me','data-sender-type','data-is-outbound']){
+          const value=child.getAttribute?.(key);
+          if(value!==null&&value!==undefined)markers.push({key,value:String(value)});
+        }
+      }
+      let outbound=false,inbound=false;
+      for(const {key,value} of markers){
+        const v=value.toLowerCase().trim();
+        if(['data-from-me','data-is-outbound','data-is-mine'].includes(key)){
+          if(v==='true'||v==='1')outbound=true;
+          if(v==='false'||v==='0')inbound=true;
+        }else if(key==='data-sender-type'||key==='data-origin'||key==='data-owner'){
+          if(/^(?:agent|operator|staff|business|company|me|attendant|atendente|equipe)$/.test(v))outbound=true;
+          if(/^(?:client|customer|contact|user|cliente|consumer)$/.test(v))inbound=true;
+        }else if(key==='data-direction'||key==='data-message-direction'||key==='data-message-type'){
+          if(/^(?:outgoing|outbound|sent|from-me|right|mine)$/.test(v))outbound=true;
+          if(/^(?:incoming|inbound|received|left|from-client)$/.test(v))inbound=true;
+        }else{
+          const parts=v.split(/[\s,;]+/);
+          if(parts.some(p=>/^(?:outgoing|outbound|sent|mine|from-me|message-out|messageout|bubble-out|message--sent|msg-out|message-right|from-agent|agent-message|operator-message)$/.test(p)))outbound=true;
+          if(parts.some(p=>/^(?:incoming|inbound|received|message-in|messagein|bubble-in|message--received|msg-in|message-left|from-client|client-message|customer-message)$/.test(p)))inbound=true;
+        }
+      }
+      if(outbound&&inbound)return {role:'Mensagem',confidence:0,method:'conflict'};
+      if(outbound||inbound)return {role:outbound?'Equipe':'Cliente',confidence:1,method:'metadata'};
+      // Para o layout em flex, alinhamento do elemento que contém a bolha.
+      // Só aceitar sinais unívocos; "justify-between" ou "center" não contam.
+      let cssOut=false,cssIn=false,container=node,hops=0;
+      while(container&&container!==root&&hops++<4){
+        const cls=String(container.getAttribute?.('class')||'').toLowerCase().split(/\s+/);
+        if(cls.some(c=>/^(?:justify-end|items-end|self-end|ml-auto|float-right|flex-row-reverse)$/.test(c)))cssOut=true;
+        if(cls.some(c=>/^(?:justify-start|items-start|self-start|mr-auto|float-left)$/.test(c)))cssIn=true;
+        const st=getComputedStyle(container);
+        if(st.alignSelf==='flex-end'||st.marginLeft==='auto'&&st.marginRight!=='auto')cssOut=true;
+        if(st.alignSelf==='flex-start'||st.marginRight==='auto'&&st.marginLeft!=='auto')cssIn=true;
+        if(st.display==='flex'||st.display==='inline-flex'){
+          if(st.justifyContent==='flex-end')cssOut=true;
+          if(st.justifyContent==='flex-start')cssIn=true;
+        }
+        container=container.parentElement;
+      }
+      if(cssOut!==cssIn)return {role:cssOut?'Equipe':'Cliente',confidence:0.9,method:'layout'};
+      // Comparar também a bolha interna: muitas mensagens Tallos têm linha
+      // de largura total; medir essa linha daria falso "Mensagem".
+      const bubble=node.querySelector?.('[data-testid*="message-bubble"],[class*="message-bubble"],[class*="messageBubble"],[class*="bubble"],[class*="Bubble"]');
+      const rootRect=elementRect(root);
+      const rect=elementRect(bubble||node);
+      if(rootRect.width>200&&rect.width>30&&rect.width<rootRect.width*0.84){
         const leftGap=rect.left-rootRect.left,rightGap=rootRect.right-rect.right;
-        if(leftGap>=90&&leftGap>rightGap+95)return {role:'Equipe',confidence:0.8,method:'alignment'};
-        if(rightGap>=90&&rightGap>leftGap+95)return {role:'Cliente',confidence:0.8,method:'alignment'};
+        const difference=leftGap-rightGap;
+        if(difference>Math.max(40,rootRect.width*0.16))return {role:'Equipe',confidence:0.8,method:'position'};
+        if(-difference>Math.max(40,rootRect.width*0.16))return {role:'Cliente',confidence:0.8,method:'position'};
       }
       return {role:'Mensagem',confidence:0,method:'unknown'};
     }
@@ -105,10 +156,18 @@
   }
   const recent=deduped.slice(-18);
   if(!recent.length)return {ok:false,source:wa?'WhatsApp Web':'Tallos',messages:[],reason:'Não encontrei mensagens de texto da conversa ativa. Você pode colar o histórico manualmente.'};
-  // O gerador valida todo o histórico transmitido; a confiabilidade precisa cobrir todas as mensagens, não apenas as oito últimas.
-  const unresolved=recent.filter(item=>item.role==='Mensagem').length;
-  const roleCount=recent.filter(item=>item.role!=='Mensagem').length;
-  return {ok:true,source:wa?'WhatsApp Web':'Tallos',messages:recent,
-    reliable:unresolved===0&&roleCount>=1,unknownRecent:unresolved,
-    reason:unresolved?'Não consegui identificar com segurança '+unresolved+' mensagens recentes. Revise as marcações Cliente/Equipe antes de gerar.':''};
+  // Se houver mensagens antigas sem direção, considerar apenas o sufixo
+  // consecutivo com autoria identificada. Nunca pular uma fala ambígua
+  // que veio depois da última mensagem da cliente.
+  const unknown=recent.filter(m=>m.role==='Mensagem').length;
+  const lastUnknown=recent.findLastIndex(m=>m.role==='Mensagem');
+  const safeSuffix=lastUnknown>=0?recent.slice(lastUnknown+1):recent;
+  const usable=safeSuffix.some(m=>m.role==='Cliente')&&safeSuffix.length>=1?safeSuffix:[];
+  const reliable=usable.length>0;
+  const skipped=lastUnknown>=0&&reliable?lastUnknown+1:0;
+  return {ok:true,source:wa?'WhatsApp Web':'Tallos',
+    messages:reliable?usable:recent,
+    reliable,unknownRecent:unknown,skippedCount:skipped,
+    reason:reliable?(skipped?'Algumas mensagens anteriores sem remetente foram desconsideradas.':''):
+      'A conversa mais recente não tem remetente identificado com segurança. Tente reler com o chat aberto ou revise apenas as últimas falas.'};
 })();
