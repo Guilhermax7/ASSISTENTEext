@@ -76,9 +76,10 @@ test('Tallos: com duas conversas abertas seleciona o editor focado, nunca o prim
   const rightRoot=element({classes:['messages-list'],rect:{left:650,right:1180,width:530,height:380,top:100,bottom:480}});
   const leftMsg=element({classes:['message-item','incoming'],text:'Mensagem errada de outro chat.',rect:{left:75,right:300,width:225,height:50,top:210,bottom:260}});
   const rightMsg=element({classes:['message-item','incoming'],text:'Cliente certa pediu segunda via.',rect:{left:690,right:930,width:240,height:50,top:210,bottom:260}});
+  const rightMsg2=element({classes:['message-item','outgoing'],text:'A equipe vai verificar.',rect:{left:880,right:1140,width:260,height:50,top:275,bottom:325}});
   leftRoot.querySelectorAll=s=>s.includes('message-item')?[leftMsg]:[];
-  rightRoot.querySelectorAll=s=>s.includes('message-item')?[rightMsg]:[];
-  leftMsg.parentElement=leftRoot;rightMsg.parentElement=rightRoot;
+  rightRoot.querySelectorAll=s=>s.includes('message-item')?[rightMsg,rightMsg2]:[];
+  leftMsg.parentElement=leftRoot;rightMsg.parentElement=rightRoot;rightMsg2.parentElement=rightRoot;
   const firstEditor=element({rect:{left:60,right:500,width:440,height:45,top:510,bottom:555}});
   const activeEditor=element({rect:{left:680,right:1150,width:470,height:45,top:510,bottom:555}});
   // O editor correto está dentro do rodapé da conversa (layout realista da Tallos).
@@ -91,7 +92,7 @@ test('Tallos: com duas conversas abertas seleciona o editor focado, nunca o prim
   };
   const out=vm.runInNewContext(reader,{location:{hostname:'app.tallos.com.br'},document:doc,getComputedStyle:style});
   assert.equal(out.reliable,true,JSON.stringify(out));
-  assert.equal(out.messages.length,1);
+  assert.equal(out.messages.length,2);
   assert.match(out.messages[0].text,/Cliente certa/);
   assert.doesNotMatch(out.messages[0].text,/outro chat/);
 });
