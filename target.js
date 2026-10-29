@@ -10,6 +10,14 @@ if (!globalThis.__sraLuckTrackerInstalled) {
     let el = document.activeElement;
     while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
     if (!editable(el)) return;
+    // Salva apenas qual campo da Tallos recebeu foco, jamais o conteúdo.
+    const composerSelector='[contenteditable="true"][data-placeholder],[contenteditable="true"][role="textbox"],.ProseMirror[contenteditable="true"],textarea[placeholder*="digite" i],textarea[placeholder*="mensagem" i]';
+    if(location.hostname.endsWith('.tallos.com.br')&&el.matches?.(composerSelector)){
+      for(const old of document.querySelectorAll('[data-sra-luck-last-composer="true"]')){
+        if(old!==el)old.removeAttribute('data-sra-luck-last-composer');
+      }
+      el.setAttribute('data-sra-luck-last-composer','true');
+    }
     const snapshot = {element:el,start:el.selectionStart,end:el.selectionEnd};
     if (el.isContentEditable) {
       const selection = window.getSelection();
