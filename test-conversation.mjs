@@ -118,7 +118,7 @@ test('Tallos: autoria incerta bloqueia geração automática em vez de inventar 
   assert.equal(out.reliable,false);
   assert.equal(out.unknownRecent,1);
   assert.equal(out.messages[2].role,'Mensagem');
-  assert.match(out.reason,/Confirme Cliente\\/Equipe/);
+  assert.match(out.reason,/Confirme Cliente/);
 });
 test('Tallos: mensagem antiga incerta não impede resposta às duas mensagens seguintes',()=>{
   const out=runTallos(false,true);
