@@ -81,6 +81,8 @@ test('Tallos: com duas conversas abertas seleciona o editor focado, nunca o prim
   leftMsg.parentElement=leftRoot;rightMsg.parentElement=rightRoot;
   const firstEditor=element({rect:{left:60,right:500,width:440,height:45,top:510,bottom:555}});
   const activeEditor=element({rect:{left:680,right:1150,width:470,height:45,top:510,bottom:555}});
+  // O editor correto está dentro do rodapé da conversa (layout realista da Tallos).
+  activeEditor.closest=selector=>selector.includes('footer')?{tagName:'FOOTER'}:null;
   const doc={
     body:{},activeElement:activeEditor,
     querySelector:sel=>sel.includes('contenteditable')?firstEditor:null,
