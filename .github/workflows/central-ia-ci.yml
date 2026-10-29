@@ -8,6 +8,7 @@ on:
       - 'manifest.json'
       - 'test-extension.mjs'
       - 'conversation-reader.js'
+      - 'target.js'
       - 'templates.js'
       - 'test-conversation.mjs'
       - 'central-ia.html'
@@ -44,6 +45,7 @@ jobs:
         run: |
           node --check ai-assistant.js
           node --check conversation-reader.js
+          node --check target.js
           node --check templates.js
           node --test test-extension.mjs test-conversation.mjs
       - name: Security and HTTP smoke tests (no real keys)
