@@ -414,6 +414,8 @@ function makeAIInlinePanel(template){
     <div class="ai-inline-context" data-ai-view="context" hidden>
       <p class="ai-hint"><strong>A IA identifica automaticamente <strong>Cliente</strong> e <strong>Equipe</strong> quando a Tallos informa a direção das mensagens. Se alguma fala antiga estiver incerta, ela é ignorada. Se a mensagem mais recente estiver sem autoria, use <strong>Reler conversa</strong>. Nenhuma mensagem é enviada automaticamente.</p>
       <textarea data-ai-field="transcript" rows="5" placeholder="Cliente: Preciso do boleto atualizado.\n\nEquipe: Posso enviar por aqui.\n\nCliente: Pode, obrigada."></textarea>
+      <div data-ai-speaker-review class="ai-speaker-review" hidden role="group" aria-label="Confirmar quem enviou a mensagem"></div>
+
       <div class="ai-inline-options"><label>Estilo<select data-ai-field="tone"><option value="adaptativo" selected>Adaptar à situação</option><option value="objetivo">Direto</option><option value="acolhedor">Acolhedor</option><option value="firme">Firme e respeitoso</option></select></label><label>Tamanho<select data-ai-field="length"><option value="curto" selected>Curta (1 a 2 frases)</option><option value="medio">Equilibrada</option><option value="detalhado">Detalhada</option></select></label></div>
       <label class="ai-field-label">Orientação extra (opcional)<textarea data-ai-field="instruction" rows="2" placeholder="Ex.: a cliente teve imprevisto. Seja direta e pergunte previsão."></textarea></label>
       <div class="ai-inline-actions"><button type="button" class="ai-primary" data-ai-action="generate">✦ Sugerir próxima resposta</button><button type="button" data-ai-action="reread">↻ Reler conversa</button></div>
