@@ -153,3 +153,19 @@ test('UI orienta revisão do remetente e usa respostas curtas por padrão',()=>{
   assert.match(ui,/identifica automaticamente/);
   assert.match(ui,/<option value="curto" selected>/);
 });
+
+test('Painel permite identificar última mensagem sem reescrever histórico',()=>{
+  assert.match(ui,/data-ai-speaker-review/);
+  assert.match(ui,/Foi a cliente/);
+  assert.match(ui,/Foi a equipe/);
+  assert.match(assistant,/async function confirmSpeaker\(/);
+  assert.match(assistant,/function safeConfirmedSuffix\(/);
+  assert.match(assistant,/speaker-confirm/);
+  assert.match(assistant,/showSpeakerReview\(root\)/);
+});
+test('Confirmação não pressupõe que uma mensagem desconhecida seja da cliente',()=>{
+  assert.match(assistant,/list\[index\]\.role!=='Mensagem'/);
+  assert.match(assistant,/\['Equipe','Cliente'\]\.includes\(role\)/);
+  assert.match(assistant,/if\(last\?\.role==='Cliente'&&\!insufficient\)/);
+  assert.match(assistant,/context\.pendingMessages=null/);
+});

@@ -520,3 +520,13 @@ footer{color:#b09cbb;border-top-color:#ffffff10}.textButton{color:#c3aecd}.textB
 /* Ollama nativo local/cloud (1.3.21) */
 #templatesView .ai-inline-panel [data-ai-ollama-choices]:not([hidden]){display:block;padding:9px;border:1px solid #5e8e84;border-radius:9px;background:#223936;margin:10px 0 6px}
 #templatesView .ai-inline-panel [data-ai-ollama-hint]:not([hidden]){border-left:3px solid #83ccb1;padding:8px 10px;background:#19372f;color:#c9eada;border-radius:4px;font-size:10px;line-height:1.55}
+
+/* Revisão rápida de autoria na Tallos — sem copiar o texto da conversa. */
+.ai-speaker-review{margin:10px 0;padding:12px;border:1px solid var(--border,rgba(140,108,167,.3));border-radius:12px;background:rgba(146,113,184,.07);display:grid;gap:9px}
+.ai-speaker-review[hidden]{display:none!important}
+.ai-speaker-review strong{font-size:13px}
+.ai-speaker-preview{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:100px;overflow:auto;font-size:12px;line-height:1.45}
+.ai-speaker-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ai-speaker-actions button{font:inherit;font-size:12px;font-weight:650;border:1px solid rgba(139,93,177,.45);border-radius:9px;cursor:pointer;padding:9px 13px;background:var(--surface,white);color:inherit}
+.ai-speaker-actions button:hover{background:rgba(145,95,193,.14)}
+.ai-speaker-review small{font-size:11px;opacity:.78;line-height:1.45}
