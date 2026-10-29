@@ -53,6 +53,23 @@ function runTallos(ambiguous=false,unknownFirst=false){
   };
   return vm.runInNewContext(reader,{location:{hostname:'app.tallos.com.br'},document:doc,getComputedStyle:style});
 }
+function runTallosLayout(){
+  const r={left:400,right:1000,width:600,height:630,top:100,bottom:730};
+  const full={left:410,right:990,width:580,height:60,top:320,bottom:380};
+  const nodes=[
+    element({classes:['message-item','flex','justify-start'],text:'Preciso de um boleto.',rect:full}),
+    element({classes:['message-item','flex','justify-end'],text:'Vou verificar.',rect:full}),
+    element({classes:['message-item','flex','justify-start'],text:'Você consegue enviar?',rect:full})
+  ];
+  const root=element({rect:r,classes:['messages-list'],children:nodes});
+  nodes.forEach(n=>n.parentElement=root);
+  const composer=element({rect:{left:420,right:970,width:550,height:35,top:735,bottom:770}});
+  return vm.runInNewContext(reader,{
+    location:{hostname:'app.tallos.com.br'},
+    document:{body:{},querySelector:sel=>sel.includes('contenteditable')?composer:null,querySelectorAll:sel=>sel==='[class*="messages-list"]'?[root]:[]},
+    getComputedStyle:style
+  });
+}
 test('WhatsApp: distingue mensagens da cliente e da equipe e preserva ordem',()=>{
   const out=runWA();
   assert.equal(out.ok,true);
@@ -70,13 +87,30 @@ test('Tallos: autoria incerta bloqueia geração automática em vez de inventar 
   assert.equal(out.reliable,false);
   assert.equal(out.unknownRecent,1);
   assert.equal(out.messages[2].role,'Mensagem');
-  assert.match(out.reason,/Revise as marcações/);
+  assert.match(out.reason,/Tente reler com o chat aberto/);
 });
-test('Histórico com fala antiga de origem desconhecida também é bloqueado',()=>{
+test('Tallos: mensagem antiga incerta não impede resposta às duas mensagens seguintes',()=>{
   const out=runTallos(false,true);
-  assert.equal(out.reliable,false);
-  assert.equal(out.messages[0].role,'Mensagem');
+  assert.equal(out.reliable,true);
+  assert.equal(out.skippedCount,1);
   assert.equal(out.unknownRecent,1);
+  assert.deepEqual(Array.from(out.messages,x=>x.role),['Equipe','Cliente']);
+  assert.match(out.messages.at(-1).text,/Pode enviar hoje/);
+});
+test('Tallos: classes flex do chat detectam remetentes com linhas de largura total',()=>{
+  const out=runTallosLayout();
+  assert.equal(out.reliable,true);
+  assert.deepEqual(Array.from(out.messages,x=>x.role),['Cliente','Equipe','Cliente']);
+  assert.equal(out.unknownRecent,0);
+});
+test('Tallos: mensagem final sem classe/direção permanece bloqueada',()=>{
+  const out=runTallos(true);
+  assert.equal(out.reliable,false);
+  assert.equal(out.messages.at(-1).role,'Mensagem');
+});
+test('Tallos: se nenhuma mensagem tem direção, não deve adivinhar autoria',()=>{
+  const out=runTallos(true,true);
+  assert.equal(out.reliable,false);
 });
 const block=assistant.slice(assistant.indexOf('  function parseConversation('),assistant.indexOf('  async function currentTab()'));
 function logic(mode='cobranca'){
@@ -93,7 +127,7 @@ function logic(mode='cobranca'){
 }
 test('Histórico sem papéis ou contendo Mensagem: exige revisão',()=>{
   const {parseConversation}=logic();
-  assert.throws(()=>parseConversation('Cliente: Oi\n\nMensagem: Tudo certo?'),/remetente identificado/);
+  assert.throws(()=>parseConversation('Cliente: Oi\n\nMensagem: Tudo certo?'),/Não consegui identificar a autoria/);
   assert.throws(()=>parseConversation('Oi, tudo bem?'),/formato/);
   assert.throws(()=>parseConversation('Equipe: Olá!'),/nenhuma fala da cliente/);
 });
@@ -116,6 +150,6 @@ test('Prompt de Atendimento usa apenas seus templates e proíbe inserir cobranç
   assert.doesNotMatch(p,/Boleto e mensalidade:/);
 });
 test('UI orienta revisão do remetente e usa respostas curtas por padrão',()=>{
-  assert.match(ui,/identifique o remetente antes de gerar/);
+  assert.match(ui,/identifica automaticamente/);
   assert.match(ui,/<option value="curto" selected>/);
 });
