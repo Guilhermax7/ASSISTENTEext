@@ -412,7 +412,7 @@ function makeAIInlinePanel(template){
       <button type="button" class="ai-inline-link" data-ai-action="from-reply">＋ Transformar esta resposta em template</button>
     </div>
     <div class="ai-inline-context" data-ai-view="context" hidden>
-      <p class="ai-hint"><strong>A IA identifica automaticamente <strong>Cliente</strong> e <strong>Equipe</strong> quando a Tallos informa a direção das mensagens. Se alguma fala antiga estiver incerta, ela é ignorada. Se a mensagem mais recente estiver sem autoria, use <strong>Reler conversa</strong>. Nenhuma mensagem é enviada automaticamente.</p>
+      <p class="ai-hint"><strong>A IA identifica automaticamente <strong>Cliente</strong> e <strong>Equipe</strong> quando a Tallos informa a direção das mensagens. Se alguma fala antiga estiver incerta, ela é ignorada. Se a Tallos não identificar a última fala, confirme <strong>Foi a cliente</strong> ou <strong>Foi a equipe</strong> com um clique; sem editar o histórico. Nenhuma mensagem é enviada automaticamente.</p>
       <textarea data-ai-field="transcript" rows="5" placeholder="Cliente: Preciso do boleto atualizado.\n\nEquipe: Posso enviar por aqui.\n\nCliente: Pode, obrigada."></textarea>
       <div data-ai-speaker-review class="ai-speaker-review" hidden role="group" aria-label="Confirmar quem enviou a mensagem"></div>
 
