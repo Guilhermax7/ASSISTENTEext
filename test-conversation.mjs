@@ -127,7 +127,7 @@ function logic(mode='cobranca'){
 }
 test('Histórico sem papéis ou contendo Mensagem: exige revisão',()=>{
   const {parseConversation}=logic();
-  assert.throws(()=>parseConversation('Cliente: Oi\n\nMensagem: Tudo certo?'),/remetente identificado/);
+  assert.throws(()=>parseConversation('Cliente: Oi\n\nMensagem: Tudo certo?'),/Não consegui identificar a autoria/);
   assert.throws(()=>parseConversation('Oi, tudo bem?'),/formato/);
   assert.throws(()=>parseConversation('Equipe: Olá!'),/nenhuma fala da cliente/);
 });
@@ -150,6 +150,6 @@ test('Prompt de Atendimento usa apenas seus templates e proíbe inserir cobranç
   assert.doesNotMatch(p,/Boleto e mensalidade:/);
 });
 test('UI orienta revisão do remetente e usa respostas curtas por padrão',()=>{
-  assert.match(ui,/identifique o remetente antes de gerar/);
+  assert.match(ui,/identifica automaticamente/);
   assert.match(ui,/<option value="curto" selected>/);
 });
