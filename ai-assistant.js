@@ -357,6 +357,30 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     ].filter(Boolean).join('\n');
   }
   async function currentTab(){const tabs=await chrome.tabs.query({active:true,currentWindow:true});return tabs[0];}
+  // A Tallos às vezes não informa o autor da última fala. Confirmar somente
+  // a última mensagem; descartar trechos anteriores incertos para não inventar.
+  function reviewLastUnknown(root,show=false){
+    const el=root.querySelector('[data-ai-unknown-review]');
+    if(el)el.hidden=!show;
+  }
+  function markLastSpeaker(transcript,role){
+    const source=normalizeContext(transcript);
+    const markers=[...source.matchAll(/^(Cliente|Equipe|Mensagem)\\s*:\\s*(.*)$/gmi)];
+    if(!markers.length||markers.at(-1)[1].toLowerCase()!=='mensagem')
+      throw new Error('Não encontrei uma última mensagem pendente de identificação. Releia a conversa.');
+    const last=markers.at(-1);
+    const latestText=source.slice(last.index+last[0].length-last[2].length).trim();
+    if(!latestText)throw new Error('A última mensagem não contém texto suficiente.');
+    const previous=markers.slice(0,-1);
+    const prevUnknown=previous.findLastIndex(m=>m[1].toLowerCase()==='mensagem');
+    const known=previous.slice(prevUnknown+1).map((m,i,array)=>{
+      const next=i+1<array.length?array[i+1].index:last.index;
+      return source.slice(m.index,next).trim();
+    }).filter(Boolean);
+    const result=[...known,role+': '+latestText].join('\\n\\n');
+    parseConversation(result);
+    return result;
+  }
   async function readChat(mode,root){
     const tab=await currentTab();
     if(!tab?.id||!/^https?:\/\//.test(tab.url||''))throw new Error('Abra uma conversa na Tallos ou WhatsApp Web.');
@@ -364,13 +388,23 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
     try{results=await chrome.scripting.executeScript({target:{tabId:tab.id,allFrames:true},files:['conversation-reader.js']});}
     catch{results=await chrome.scripting.executeScript({target:{tabId:tab.id},files:['conversation-reader.js']});}
     const list=results.map(r=>r.result).filter(Boolean);
+    reviewLastUnknown(root,false);
     const best=list.filter(r=>r.ok&&r.messages?.length).sort((a,b)=>Number(b.reliable===true)-Number(a.reliable===true)||b.messages.length-a.messages.length)[0];
     if(!best)throw new Error((list.find(x=>x.reason)?.reason||'Não foi possível ler o chat.')+' Cole o trecho da conversa abaixo.');
     context={text:normalizeContext(best.messages.map(m=>`${m.role}: ${m.text}`).join('\n\n')),tabId:tab.id,name:'',source:best.source||'conversa'};
     try{context.name=await identifyCurrentName(tab.id);}catch{}
     field(root,'transcript').value=context.text;
     const info=root.querySelector('[data-ai-context-info]');if(info)info.textContent=`${best.reliable?'✓':'⚠'} ${best.messages.length} mensagens · ${context.source}${best.reliable?(best.skippedCount?' · histórico antigo incerto ignorado':' · remetentes identificados'):' · última mensagem sem autoria'}`;
-    if(!best.reliable)throw new Error(best.reason||'A Tallos não informou a direção das mensagens mais recentes. Tente Reler conversa com o chat aberto.');
+    reviewLastUnknown(root,false);
+    if(!best.reliable){
+      const last=best.messages.at(-1);
+      if(last?.role==='Mensagem'){
+        reviewLastUnknown(root,true);
+        const hint=root.querySelector('[data-ai-unknown-preview]');
+        if(hint)hint.textContent='Quem enviou esta última mensagem? '+last.text.slice(0,190);
+      }
+      throw new Error(best.reason||'Não foi possível identificar a última fala automaticamente. Confira somente a última mensagem abaixo.');
+    }
   }
   // Sobrecarregamento e limite temporário são tratados de forma diferente de erros de credenciais.
   // Até 3 chamadas no total, com pausas curtas e respeito ao Retry-After do provedor.
@@ -684,6 +718,16 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
       connection=null;resultsCache.clear();context={text:'',tabId:null,name:'',source:''};fillConfiguration(root);field(root,'key').value='';display(root,'config');err(root,'Chave apagada deste navegador pela extensão. Configure novamente para gerar respostas.');return;
     }
     if(act==='context'){markWorkflow(root,'reply');display(root,'context');err(root,'');return;}
+    if(act==='last-is-client'||act==='last-is-team'){
+      try{
+        const role=act==='last-is-client'?'Cliente':'Equipe';
+        field(root,'transcript').value=markLastSpeaker(field(root,'transcript').value,role);
+        reviewLastUnknown(root,false);
+        err(root,'');
+        await generate(mode,false);
+      }catch(error){display(root,'context');err(root,error.message||'Não consegui interpretar a última fala.');}
+      return;
+    }
     if(act==='reread'){try{busyLabel(root,'Lendo conversa novamente…');await readChat(mode,root);display(root,'context');err(root,'');}catch(error){display(root,'context');err(root,error.message);}return;}
     if(act==='generate'||act==='regenerate'){await generate(mode,false);return;}
     if(act==='insert'||act==='copy'){
