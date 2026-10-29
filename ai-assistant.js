@@ -359,78 +359,74 @@ Variáveis PERMITIDAS: {{primeiro_nome}}, {{saudacao_capitalizada}}, {{saudacao}
   async function currentTab(){const tabs=await chrome.tabs.query({active:true,currentWindow:true});return tabs[0];}
   // A Tallos muda o DOM com frequência. Se o remetente não estiver explícito,
   // oferecemos dois botões e nunca pedimos que a equipe edite todo o histórico.
+  // Falas ambíguas são confirmadas pela atendente, nunca adivinhadas.
   function showSpeakerReview(root){
     const holder=root.querySelector('[data-ai-speaker-review]');
     if(!holder)return;
     holder.replaceChildren();
     const list=context.pendingMessages;
-    const lastUnknown=Array.isArray(list)?list.findLastIndex(m=>m.role==='Mensagem'):-1;
-    holder.hidden=lastUnknown<0;
-    if(lastUnknown<0)return;
-    const bubble=list[lastUnknown];
+    const recent=Array.isArray(list)?list.slice(-8):[];
+    const offset=Array.isArray(list)?list.length-recent.length:0;
+    const unknown=recent.map((item,i)=>({...item,index:offset+i}))
+      .filter(item=>item.role==='Mensagem');
+    holder.hidden=!unknown.length;
+    if(!unknown.length)return;
     const title=document.createElement('strong');
-    title.textContent='Quem enviou esta mensagem?';
-    const snippet=document.createElement('p');
-    snippet.className='ai-speaker-preview';
-    snippet.textContent=String(bubble?.text||'').slice(0,260);
-    const actions=document.createElement('div');
-    actions.className='ai-speaker-actions';
-    for(const [role,caption] of [['Cliente','Foi a cliente'],['Equipe','Foi a equipe']]){
-      const button=document.createElement('button');
-      button.type='button';
-      button.dataset.aiAction='speaker-confirm';
-      button.dataset.speakerRole=role;
-      button.dataset.speakerIndex=String(lastUnknown);
-      button.textContent=caption;
-      actions.append(button);
+    title.textContent='Confirme quem enviou '+unknown.length+' mensagens';
+    const note=document.createElement('p');
+    note.className='ai-hint';
+    note.textContent='Confira as falas na Tallos e selecione Cliente ou Equipe. A IA não vai adivinhar.';
+    holder.append(title,note);
+    for(const item of unknown){
+      const wrap=document.createElement('div');
+      wrap.className='ai-speaker-item';
+      const excerpt=document.createElement('p');
+      excerpt.className='ai-speaker-preview';
+      excerpt.textContent=String(item.text||'').slice(0,280);
+      const actions=document.createElement('div');
+      actions.className='ai-speaker-actions';
+      for(const [role,label] of [['Cliente','Cliente'],['Equipe','Equipe']]){
+        const button=document.createElement('button');
+        button.type='button';
+        button.dataset.aiAction='speaker-confirm';
+        button.dataset.speakerRole=role;
+        button.dataset.speakerIndex=String(item.index);
+        button.textContent=label;
+        actions.append(button);
+      }
+      wrap.append(excerpt,actions);
+      holder.append(wrap);
     }
-    const hint=document.createElement('small');
-    hint.textContent='A confirmação vale só para esta conversa. Falas anteriores sem autoria não serão enviadas à IA.';
-    holder.append(title,snippet,actions,hint);
-  }
-  function safeConfirmedSuffix(messages){
-    const lastUnknown=messages.findLastIndex(m=>m.role==='Mensagem');
-    return messages.slice(lastUnknown+1).filter(m=>m.role==='Cliente'||m.role==='Equipe');
   }
   async function confirmSpeaker(root,mode,button){
-    const list=context.pendingMessages;
-    const role=button.dataset.speakerRole;
+    const list=context.pendingMessages,role=button.dataset.speakerRole;
     const index=Number(button.dataset.speakerIndex);
     if(!Array.isArray(list)||!Number.isInteger(index)||index<0||index>=list.length||
-        list[index].role!=='Mensagem'||!['Equipe','Cliente'].includes(role)){
-      err(root,'A conversa mudou. Clique em Reler conversa para conferir o histórico.');return;
+       list[index].role!=='Mensagem'||!['Equipe','Cliente'].includes(role)){
+      err(root,'A conversa mudou. Clique em Reler conversa para conferir.');return;
     }
     const tab=await currentTab();
     if(!tab?.id||tab.id!==context.tabId){
-      err(root,'Você mudou de conversa ou aba. Releia antes de confirmar o remetente.');return;
+      err(root,'Você mudou de aba. Releia a conversa antes de confirmar.');return;
     }
-    list[index]={...list[index],role};
-    const suffix=safeConfirmedSuffix(list);
-    const last=suffix.at(-1);
-    // Evitar responder um "sim" isolado sem conhecer a pergunta anterior.
-    const lastStandalone=String(last?.text||'').trim();
-    const insufficient=suffix.length===1 && (lastStandalone.length<24||
-      /^(?:sim|nao|não|ok|pode|isso|certo|tá|ta|obrigad[ao]|beleza)[!?. ]*$/i.test(lastStandalone));
-    if(last?.role==='Cliente'&&!insufficient){
-      const verified=normalizeContext(suffix.map(m=>m.role+': '+m.text).join('\n\n'));
-      context.text=verified;
-      context.pendingMessages=null;
-      field(root,'transcript').value=verified;
-      showSpeakerReview(root);
-      const info=root.querySelector('[data-ai-context-info]');
-      if(info)info.textContent='✓ Últimas '+suffix.length+' falas confirmadas · '+context.source;
-      err(root,'');
-      await generate(mode,false);
-      return;
-    }
+    list[index]={...list[index],role,confidence:1,confirmedByOperator:true};
     showSpeakerReview(root);
-    if(last?.role==='Equipe' && !list.some(m=>m.role==='Mensagem')){
-      err(root,'A última mensagem foi da equipe. Aguarde a resposta da cliente ou clique em Reler conversa.');return;
+    const recent=list.slice(-8);
+    const pending=recent.filter(item=>item.role==='Mensagem');
+    if(pending.length){
+      err(root,'Faltam '+pending.length+' mensagens. Confirme Cliente ou Equipe nas falas destacadas.');return;
     }
-    if(insufficient && !list.some(m=>m.role==='Mensagem')){
-      err(root,'A resposta da cliente depende de contexto anterior. Cole a pergunta e a resposta no histórico antes de gerar.');return;
+    if(recent.length<2||!recent.some(item=>item.role==='Cliente')){
+      err(root,'Preciso de pelo menos duas falas e uma mensagem da cliente para gerar com contexto.');return;
     }
-    err(root,'Confirme também a mensagem imediatamente anterior para que a IA compreenda a conversa.');
+    const verified=normalizeContext(recent.map(item=>item.role+': '+item.text).join('\n\n'));
+    context.text=verified;context.pendingMessages=null;
+    field(root,'transcript').value=verified;
+    showSpeakerReview(root);
+    const info=root.querySelector('[data-ai-context-info]');
+    if(info)info.textContent='✓ '+recent.length+' falas revisadas · '+context.source;
+    err(root,'');
+    await generate(mode,false);
   }
   async function readChat(mode,root){
     const tab=await currentTab();
