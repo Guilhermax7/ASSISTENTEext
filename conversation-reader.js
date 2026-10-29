@@ -84,7 +84,11 @@
       // Não ler classes do contêiner compartilhado por conversas ou mensagens.
       while(current&&current!==root&&depth++<5){
         // Não herdar atributos de um ancestral que misture vários remetentes.
-        if(depth>1&&current.querySelectorAll?.(selector).length>1)break;
+        if(depth>1){
+          const found=[...current.querySelectorAll?.(selector)||[]];
+          const independent=found.filter(el=>!found.some(other=>other!==el&&el.contains(other)));
+          if(independent.length>1)break;
+        }
         const keys=['data-side','data-align','data-message-role','data-message-owner',
           'data-author-type','data-sender-role','data-is-incoming',
           'class','data-direction','data-message-direction','data-sender-type',
