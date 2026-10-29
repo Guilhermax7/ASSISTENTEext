@@ -38,7 +38,14 @@
     }
   }else{
     const composerSelector='[contenteditable="true"][data-placeholder],[contenteditable="true"][role="textbox"],.ProseMirror[contenteditable="true"],textarea[placeholder*="digite" i],textarea[placeholder*="mensagem" i]';
-    const editors=[...document.querySelectorAll(composerSelector)].filter(visible);
+    const editorVisible=el=>{
+      if(!el||!el.isConnected||el.closest('[hidden],[aria-hidden="true"],nav,aside,[role="navigation"],[role="search"]'))return false;
+      const style=getComputedStyle(el),rect=elementRect(el);
+      return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
+    };
+    // Um compositor fica frequentemente dentro de <footer>. O filtro de
+    // mensagens exclui footer de propósito, mas o filtro de editor não pode.
+    const editors=[...document.querySelectorAll(composerSelector)].filter(editorVisible);
     // Escolhe o editor selecionado, não a primeira conversa da página.
     const focus=document.activeElement;
     const composer=editors.find(el=>el===focus||el.contains?.(focus)) ||
